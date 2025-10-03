@@ -1,0 +1,86 @@
+// Database types that match the Supabase schema
+
+export namespace Database {
+  export interface Artist {
+    id: string;
+    user_id: string | null;
+    name: string;
+    username: string;
+    bio: string | null;
+    profile_image: string | null;
+    created_at: string;
+    updated_at: string;
+  }
+
+  export interface Artwork {
+    id: string;
+    artist_id: string;
+    title: string;
+    description: string | null;
+    image_url: string;
+    category: string;
+    current_price: number | null;
+    fixed_price: number | null;
+    sale_type: 'auction' | 'fixed';
+    auction_end_time: string | null;
+    highest_bidder: string | null;
+    bid_count: number;
+    views: number;
+    likes: number;
+    status: 'active' | 'sold' | 'upcoming';
+    created_at: string;
+    updated_at: string;
+  }
+
+  export interface Profile {
+    id: string;
+    role: 'buyer' | 'artist';
+    created_at: string;
+    updated_at: string;
+  }
+}
+
+// Extended types for application use
+
+export interface ArtworkWithArtist extends Database.Artwork {
+  artist: Database.Artist;
+}
+
+// Helper types for computed fields
+export interface ArtistWithStats extends Database.Artist {
+  total_artworks: number;
+  sold_artworks: number;
+}
+
+// Legacy type aliases for backwards compatibility with existing code
+export interface Artist {
+  id: string;
+  name: string;
+  username: string;
+  bio: string;
+  profileImage: string;
+  totalArtworks: number;
+  soldArtworks: number;
+}
+
+export interface Artwork {
+  id: string;
+  title: string;
+  artistId: string;
+  artistName: string;
+  artistUsername: string;
+  imageUrl: string;
+  description: string;
+  category: string;
+  currentPrice?: number;
+  fixedPrice?: number;
+  saleType: "auction" | "fixed";
+  auctionEndTime?: Date;
+  highestBidder?: string;
+  bidCount?: number;
+  views: number;
+  likes: number;
+  isLiked?: boolean;
+  status: "active" | "sold" | "upcoming";
+  createdAt: Date;
+}

@@ -6,22 +6,26 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Heart, Eye, Clock, Gavel } from "lucide-react";
-import { getArtworkById, getArtistById } from "@/lib/data";
+import { getArtworkById } from "@/lib/queries";
+import { transformArtworkToLegacy, transformArtistToLegacy } from "@/lib/utils/transform";
 
 interface ArtworkPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function ArtworkPage({ params }: ArtworkPageProps) {
-  const artwork = getArtworkById(params.id);
+export default async function ArtworkPage({ params }: ArtworkPageProps) {
+  const { id } = await params;
+  const artworkDb = await getArtworkById(id);
 
-  if (!artwork) {
+  if (!artworkDb) {
     notFound();
   }
 
-  const artist = getArtistById(artwork.artistId);
+  // Transform DB data to legacy format
+  const artwork = transformArtworkToLegacy(artworkDb);
+  const artist = transformArtistToLegacy(artworkDb.artist);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + " 원";

@@ -4,24 +4,42 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArtworkCard } from "@/components/artwork-card";
-import { getArtistById, getArtworksByArtist } from "@/lib/data";
+import { getArtistById, getArtworksByArtist } from "@/lib/queries";
+import { transformArtistToLegacy, transformArtworkToLegacy } from "@/lib/utils/transform";
 
 interface ArtistPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function ArtistPage({ params }: ArtistPageProps) {
-  const artist = getArtistById(params.id);
+export default async function ArtistPage({ params }: ArtistPageProps) {
+  const { id } = await params;
+  const artistDb = await getArtistById(id);
 
-  if (!artist) {
+  if (!artistDb) {
     notFound();
   }
 
-  const artworks = getArtworksByArtist(params.id);
+  const artworksDb = await getArtworksByArtist(id);
+
+  // Calculate stats
+  const totalArtworks = artworksDb.length;
+  const soldArtworks = artworksDb.filter((a) => a.status === "sold").length;
+
+  // Transform DB data to legacy format
+  const artist = transformArtistToLegacy(artistDb, totalArtworks, soldArtworks);
+  const artworks = artworksDb.map((artworkDb) => ({
+    ...transformArtworkToLegacy({
+      ...artworkDb,
+      artist: artistDb
+    }),
+    artistName: artistDb.name,
+    artistUsername: artistDb.username
+  }));
+
   const activeArtworks = artworks.filter((a) => a.status === "active");
-  const soldArtworks = artworks.filter((a) => a.status === "sold");
+  const soldArtworksList = artworks.filter((a) => a.status === "sold");
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -77,7 +95,7 @@ export default function ArtistPage({ params }: ArtistPageProps) {
             판매 중 ({activeArtworks.length})
           </TabsTrigger>
           <TabsTrigger value="sold">
-            판매 완료 ({soldArtworks.length})
+            판매 완료 ({soldArtworksList.length})
           </TabsTrigger>
           <TabsTrigger value="all">전체 ({artworks.length})</TabsTrigger>
         </TabsList>
@@ -99,9 +117,9 @@ export default function ArtistPage({ params }: ArtistPageProps) {
         </TabsContent>
 
         <TabsContent value="sold">
-          {soldArtworks.length > 0 ? (
+          {soldArtworksList.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {soldArtworks.map((artwork) => (
+              {soldArtworksList.map((artwork) => (
                 <ArtworkCard key={artwork.id} artwork={artwork} />
               ))}
             </div>

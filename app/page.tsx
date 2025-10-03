@@ -1,11 +1,16 @@
 import { ArtworkCard } from "@/components/artwork-card";
 import { Button } from "@/components/ui/button";
-import { getFeaturedArtworks, getEndingSoonArtworks } from "@/lib/data";
+import { getFeaturedArtworks, getEndingSoonArtworks } from "@/lib/queries";
+import { transformArtworkToLegacy } from "@/lib/utils/transform";
 import Link from "next/link";
 
-export default function Home() {
-  const featuredArtworks = getFeaturedArtworks();
-  const endingSoonArtworks = getEndingSoonArtworks();
+export default async function Home() {
+  const featuredArtworksDb = await getFeaturedArtworks();
+  const endingSoonArtworksDb = await getEndingSoonArtworks();
+
+  // Transform DB data to legacy format for components
+  const featuredArtworks = featuredArtworksDb.map(transformArtworkToLegacy);
+  const endingSoonArtworks = endingSoonArtworksDb.map(transformArtworkToLegacy);
 
   return (
     <div className="container mx-auto px-4 py-12">
