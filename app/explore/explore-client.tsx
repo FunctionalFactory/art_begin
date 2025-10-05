@@ -46,15 +46,8 @@ export function ExploreClient({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        {/* Filter Sidebar */}
-        <aside className="md:col-span-1">
-          <div className="sticky top-4">
-            <FilterSidebar categories={categories} artists={artists} />
-          </div>
-        </aside>
-
         {/* Artworks Grid */}
-        <main className="md:col-span-3">
+        <main className="md:col-span-3 order-last md:order-none">
           {artworks.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -95,6 +88,13 @@ export function ExploreClient({
             </div>
           )}
         </main>
+
+        {/* Filter Sidebar */}
+        <aside className="md:col-span-1 order-first md:order-none">
+          <div className="sticky top-4">
+            <FilterSidebar categories={categories} artists={artists} />
+          </div>
+        </aside>
       </div>
     </div>
   );
