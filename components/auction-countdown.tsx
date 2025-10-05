@@ -31,17 +31,24 @@ function getTimeRemaining(endTime: Date): TimeRemaining {
 }
 
 export function AuctionCountdown({ endTime }: AuctionCountdownProps) {
-  const [timeRemaining, setTimeRemaining] = useState<TimeRemaining>(
-    getTimeRemaining(endTime)
-  );
+  // Initialize with null to avoid hydration mismatch
+  // Server and client will both render the same initial state
+  const [timeRemaining, setTimeRemaining] = useState<TimeRemaining | null>(null);
 
   useEffect(() => {
+    // Calculate immediately on mount (client-side only)
+    setTimeRemaining(getTimeRemaining(endTime));
+
+    // Then update every second
     const interval = setInterval(() => {
       setTimeRemaining(getTimeRemaining(endTime));
     }, 1000);
 
     return () => clearInterval(interval);
   }, [endTime]);
+
+  // If timeRemaining is null, show placeholder (prevents hydration mismatch)
+  const displayTime = timeRemaining || { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
   return (
     <div className="bg-muted p-4 rounded-lg">
@@ -51,19 +58,19 @@ export function AuctionCountdown({ endTime }: AuctionCountdownProps) {
       </div>
       <div className="flex space-x-4 text-center">
         <div>
-          <p className="text-2xl font-bold">{timeRemaining.days}</p>
+          <p className="text-2xl font-bold">{displayTime.days}</p>
           <p className="text-xs text-muted-foreground">일</p>
         </div>
         <div>
-          <p className="text-2xl font-bold">{timeRemaining.hours}</p>
+          <p className="text-2xl font-bold">{displayTime.hours}</p>
           <p className="text-xs text-muted-foreground">시간</p>
         </div>
         <div>
-          <p className="text-2xl font-bold">{timeRemaining.minutes}</p>
+          <p className="text-2xl font-bold">{displayTime.minutes}</p>
           <p className="text-xs text-muted-foreground">분</p>
         </div>
         <div>
-          <p className="text-2xl font-bold">{timeRemaining.seconds}</p>
+          <p className="text-2xl font-bold">{displayTime.seconds}</p>
           <p className="text-xs text-muted-foreground">초</p>
         </div>
       </div>
