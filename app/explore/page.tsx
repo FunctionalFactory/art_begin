@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { ExploreClient } from "./explore-client";
 
 interface ExplorePageProps {
-  searchParams: {
+  searchParams: Promise<{
     q?: string;
     category?: string;
     saleType?: string;
@@ -13,11 +13,12 @@ interface ExplorePageProps {
     artist?: string;
     sort?: string;
     page?: string;
-  };
+  }>;
 }
 
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
-  const page = parseInt(searchParams.page || "1");
+  const params = await searchParams;
+  const page = parseInt(params.page || "1");
   const limit = 12;
 
   // Get current user
@@ -26,13 +27,13 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
 
   // Search artworks with filters
   const { artworks: artworksDb, totalCount } = await searchArtworks({
-    searchQuery: searchParams.q,
-    category: searchParams.category,
-    saleType: searchParams.saleType,
-    priceMin: searchParams.minPrice ? parseInt(searchParams.minPrice) : undefined,
-    priceMax: searchParams.maxPrice ? parseInt(searchParams.maxPrice) : undefined,
-    artistId: searchParams.artist,
-    sortBy: searchParams.sort,
+    searchQuery: params.q,
+    category: params.category,
+    saleType: params.saleType,
+    priceMin: params.minPrice ? parseInt(params.minPrice) : undefined,
+    priceMax: params.maxPrice ? parseInt(params.maxPrice) : undefined,
+    artistId: params.artist,
+    sortBy: params.sort,
     page,
     limit,
   });

@@ -143,7 +143,12 @@ export async function getRecentBids(
     .limit(limit);
 
   if (error) {
-    console.error("Error fetching recent bids:", error);
+    console.error("Error fetching recent bids:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
     return [];
   }
 
