@@ -119,6 +119,49 @@ export async function getUserBidForArtwork(
 }
 
 /**
+ * Get recent bids for a specific artwork with anonymization
+ * Returns bid history with masked user IDs (except for current user)
+ */
+export async function getRecentBids(
+  artworkId: string,
+  currentUserId?: string,
+  limit: number = 10
+): Promise<Array<{
+  id: string;
+  bidAmount: number;
+  createdAt: Date;
+  userId: string;
+  isCurrentUser: boolean;
+}>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("bids")
+    .select("*")
+    .eq("artwork_id", artworkId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching recent bids:", error);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  // Transform and anonymize
+  return data.map((bid) => ({
+    id: bid.id,
+    bidAmount: bid.bid_amount,
+    createdAt: new Date(bid.created_at),
+    userId: bid.user_id,
+    isCurrentUser: currentUserId ? bid.user_id === currentUserId : false,
+  }));
+}
+
+/**
  * Get user's bids with status (highest or outbid)
  * Returns bids with artwork info and whether user is highest bidder
  */

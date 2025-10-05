@@ -11,6 +11,8 @@ export {
 export {
   getArtworkById,
   getArtworksByArtist,
+  getRelatedArtworksByArtist,
+  getRelatedArtworksByCategory,
   getFeaturedArtworks,
   getEndingSoonArtworks,
   getAllArtworks,
@@ -33,6 +35,7 @@ export {
   getUserBidForArtwork,
   getUserBidsWithStatus,
   getUserBidArtworks,
+  getRecentBids,
 } from './bids';
 
 export {
