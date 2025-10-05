@@ -46,6 +46,74 @@ export async function getArtworksByArtist(artistId: string): Promise<Database.Ar
   return data || [];
 }
 
+/**
+ * Get related artworks by the same artist (excluding current artwork)
+ */
+export async function getRelatedArtworksByArtist(
+  artistId: string,
+  currentArtworkId: string,
+  limit: number = 4
+): Promise<ArtworkWithArtist[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('artworks')
+    .select(`
+      *,
+      artist:artists (*)
+    `)
+    .eq('artist_id', artistId)
+    .eq('status', 'active')
+    .neq('id', currentArtworkId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching related artworks by artist:', error);
+    return [];
+  }
+
+  // Transform the data to match ArtworkWithArtist type
+  return (data || []).map((artwork) => ({
+    ...artwork,
+    artist: Array.isArray(artwork.artist) ? artwork.artist[0] : artwork.artist,
+  })) as ArtworkWithArtist[];
+}
+
+/**
+ * Get related artworks by the same category (excluding current artwork)
+ */
+export async function getRelatedArtworksByCategory(
+  category: string,
+  currentArtworkId: string,
+  limit: number = 4
+): Promise<ArtworkWithArtist[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('artworks')
+    .select(`
+      *,
+      artist:artists (*)
+    `)
+    .eq('category', category)
+    .eq('status', 'active')
+    .neq('id', currentArtworkId)
+    .order('likes', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching related artworks by category:', error);
+    return [];
+  }
+
+  // Transform the data to match ArtworkWithArtist type
+  return (data || []).map((artwork) => ({
+    ...artwork,
+    artist: Array.isArray(artwork.artist) ? artwork.artist[0] : artwork.artist,
+  })) as ArtworkWithArtist[];
+}
+
 export async function getFeaturedArtworks(): Promise<ArtworkWithArtist[]> {
   const supabase = await createClient();
 

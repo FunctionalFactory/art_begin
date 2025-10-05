@@ -1,7 +1,6 @@
 // Transform database types to legacy application types for backwards compatibility
 
-import type { Database, ArtworkWithArtist, ArtistWithStats } from '@/lib/types';
-import type { Artwork, Artist } from '@/lib/data';
+import type { Database, ArtworkWithArtist, ArtistWithStats, Artwork, Artist } from '@/lib/types';
 
 export function transformArtworkToLegacy(
   dbArtwork: ArtworkWithArtist,
@@ -16,6 +15,7 @@ export function transformArtworkToLegacy(
     artistName: dbArtwork.artist.name,
     artistUsername: dbArtwork.artist.username,
     imageUrl: dbArtwork.image_url,
+    images: dbArtwork.images ?? undefined,
     description: dbArtwork.description || '',
     category: dbArtwork.category,
     currentPrice: dbArtwork.current_price ?? undefined,

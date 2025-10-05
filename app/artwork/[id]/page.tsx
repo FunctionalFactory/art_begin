@@ -1,22 +1,84 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Eye } from "lucide-react";
-import { getArtworkById, checkIsFavorited } from "@/lib/queries";
+import {
+  getArtworkById,
+  checkIsFavorited,
+  getRelatedArtworksByArtist,
+  getRelatedArtworksByCategory,
+} from "@/lib/queries";
+import { getRecentBids } from "@/lib/queries/bids";
 import { transformArtworkToLegacy, transformArtistToLegacy } from "@/lib/utils/transform";
 import { LikeButton } from "@/components/like-button";
 import { BidForm } from "@/components/bid-form";
 import { PurchaseButton } from "@/components/purchase-button";
 import { AuctionCountdown } from "@/components/auction-countdown";
+import { ImageGallery } from "@/components/image-gallery";
+import { RelatedArtworks } from "@/components/related-artworks";
+import { BidHistory } from "@/components/bid-history";
+import { ShareButton } from "@/components/share-button";
+import { ArtworkBreadcrumb } from "@/components/artwork-breadcrumb";
 import { createClient } from "@/utils/supabase/server";
 
 interface ArtworkPageProps {
   params: Promise<{
     id: string;
   }>;
+}
+
+export async function generateMetadata({
+  params,
+}: ArtworkPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const artworkDb = await getArtworkById(id);
+
+  if (!artworkDb) {
+    return {
+      title: "작품을 찾을 수 없습니다",
+    };
+  }
+
+  const price = artworkDb.sale_type === "auction"
+    ? artworkDb.current_price
+    : artworkDb.fixed_price;
+
+  const priceText = price
+    ? new Intl.NumberFormat("ko-KR").format(price) + " 원"
+    : "";
+
+  const description = artworkDb.description
+    ? artworkDb.description.substring(0, 160)
+    : `${artworkDb.artist.name} 작가의 ${artworkDb.title}`;
+
+  return {
+    title: `${artworkDb.title} - ${artworkDb.artist.name} | ART-XHIBIT`,
+    description,
+    openGraph: {
+      title: artworkDb.title,
+      description: `${artworkDb.artist.name} 작가의 작품 | ${priceText}`,
+      images: [
+        {
+          url: artworkDb.images?.[0] || artworkDb.image_url,
+          width: 1200,
+          height: 1200,
+          alt: artworkDb.title,
+        },
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: artworkDb.title,
+      description: `${artworkDb.artist.name} 작가의 작품 | ${priceText}`,
+      images: [artworkDb.images?.[0] || artworkDb.image_url],
+    },
+  };
 }
 
 export default async function ArtworkPage({ params }: ArtworkPageProps) {
@@ -36,28 +98,48 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
   const artwork = transformArtworkToLegacy(artworkDb, isLiked);
   const artist = transformArtistToLegacy(artworkDb.artist);
 
+  // Get image gallery (use images array if available, fallback to single image)
+  const galleryImages = artwork.images && artwork.images.length > 0
+    ? artwork.images
+    : [artwork.imageUrl];
+
+  // Fetch related artworks and bid history in parallel
+  const [relatedByArtist, relatedByCategory, recentBids] = await Promise.all([
+    getRelatedArtworksByArtist(artwork.artistId, artwork.id, 4),
+    getRelatedArtworksByCategory(artwork.category, artwork.id, 4),
+    artwork.saleType === "auction" ? getRecentBids(artwork.id, user?.id, 10) : Promise.resolve([]),
+  ]);
+
+  // Transform related artworks to legacy format
+  const relatedArtistArtworks = relatedByArtist.map(aw =>
+    transformArtworkToLegacy(aw)
+  );
+  const relatedCategoryArtworks = relatedByCategory.map(aw =>
+    transformArtworkToLegacy(aw)
+  );
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + " 원";
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Breadcrumb */}
+      <div className="mb-6">
+        <ArtworkBreadcrumb artworkTitle={artwork.title} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-        {/* Image Section */}
-        <div className="relative aspect-square rounded-lg overflow-hidden">
-          <Image
-            src={artwork.imageUrl}
-            alt={artwork.title}
-            fill
-            className="object-cover"
-            priority
-          />
-        </div>
+        {/* Image Gallery Section */}
+        <ImageGallery images={galleryImages} title={artwork.title} />
 
         {/* Details Section */}
         <div className="space-y-6">
           <div>
-            <Badge className="mb-4">{artwork.category}</Badge>
+            <div className="flex items-center justify-between mb-4">
+              <Badge>{artwork.category}</Badge>
+              <ShareButton title={artwork.title} text={`${artwork.artistName}의 작품: ${artwork.title}`} />
+            </div>
             <h1 className="text-4xl font-bold mb-2">{artwork.title}</h1>
             <Link
               href={`/artist/${artwork.artistId}`}
@@ -149,8 +231,8 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
         </div>
       </div>
 
-      {/* Description Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Description and Info Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         <div className="lg:col-span-2 space-y-6">
           <div>
             <h2 className="text-2xl font-bold mb-4">작품 설명</h2>
@@ -159,6 +241,12 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
             </p>
           </div>
 
+          {/* Bid History (for auction items) */}
+          {artwork.saleType === "auction" && recentBids.length > 0 && (
+            <div>
+              <BidHistory bids={recentBids} />
+            </div>
+          )}
         </div>
 
         {/* Artist Info */}
@@ -204,6 +292,31 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
           </div>
         )}
       </div>
+
+      {/* Related Artworks Section */}
+      {relatedArtistArtworks.length > 0 && (
+        <>
+          <Separator className="my-12" />
+          <div className="mb-12">
+            <RelatedArtworks
+              artworks={relatedArtistArtworks}
+              title={`${artwork.artistName}의 다른 작품`}
+            />
+          </div>
+        </>
+      )}
+
+      {relatedCategoryArtworks.length > 0 && (
+        <>
+          <Separator className="my-12" />
+          <div className="mb-12">
+            <RelatedArtworks
+              artworks={relatedCategoryArtworks}
+              title={`비슷한 ${artwork.category} 작품`}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
