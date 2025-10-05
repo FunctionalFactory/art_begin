@@ -1,16 +1,32 @@
 import { ArtworkCard } from "@/components/artwork-card";
 import { Button } from "@/components/ui/button";
-import { getFeaturedArtworks, getEndingSoonArtworks } from "@/lib/queries";
+import { getFeaturedArtworks, getEndingSoonArtworks, getUserFavoritesMap } from "@/lib/queries";
 import { transformArtworkToLegacy } from "@/lib/utils/transform";
+import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 
 export default async function Home() {
   const featuredArtworksDb = await getFeaturedArtworks();
   const endingSoonArtworksDb = await getEndingSoonArtworks();
 
-  // Transform DB data to legacy format for components
-  const featuredArtworks = featuredArtworksDb.map(transformArtworkToLegacy);
-  const endingSoonArtworks = endingSoonArtworksDb.map(transformArtworkToLegacy);
+  // Get current user
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Get user's favorites map for all artworks on page
+  const allArtworkIds = [
+    ...featuredArtworksDb.map((a) => a.id),
+    ...endingSoonArtworksDb.map((a) => a.id),
+  ];
+  const favoritesMap = await getUserFavoritesMap(user?.id, allArtworkIds);
+
+  // Transform DB data to legacy format with like status
+  const featuredArtworks = featuredArtworksDb.map((artwork) =>
+    transformArtworkToLegacy(artwork, favoritesMap.get(artwork.id))
+  );
+  const endingSoonArtworks = endingSoonArtworksDb.map((artwork) =>
+    transformArtworkToLegacy(artwork, favoritesMap.get(artwork.id))
+  );
 
   return (
     <div className="container mx-auto px-4 py-12">

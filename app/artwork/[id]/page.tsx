@@ -4,10 +4,14 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Heart, Eye, Clock, Gavel } from "lucide-react";
-import { getArtworkById } from "@/lib/queries";
+import { Eye } from "lucide-react";
+import { getArtworkById, checkIsFavorited } from "@/lib/queries";
 import { transformArtworkToLegacy, transformArtistToLegacy } from "@/lib/utils/transform";
+import { LikeButton } from "@/components/like-button";
+import { BidForm } from "@/components/bid-form";
+import { PurchaseButton } from "@/components/purchase-button";
+import { AuctionCountdown } from "@/components/auction-countdown";
+import { createClient } from "@/utils/supabase/server";
 
 interface ArtworkPageProps {
   params: Promise<{
@@ -23,22 +27,17 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
     notFound();
   }
 
+  // Get current user and check if favorited
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isLiked = await checkIsFavorited(user?.id, id);
+
   // Transform DB data to legacy format
-  const artwork = transformArtworkToLegacy(artworkDb);
+  const artwork = transformArtworkToLegacy(artworkDb, isLiked);
   const artist = transformArtistToLegacy(artworkDb.artist);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + " 원";
-  };
-
-  const getTimeRemaining = (endTime: Date) => {
-    const now = new Date();
-    const diff = endTime.getTime() - now.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    return { days, hours, minutes };
   };
 
   return (
@@ -69,10 +68,13 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
           </div>
 
           <div className="flex items-center space-x-6 text-muted-foreground">
-            <div className="flex items-center space-x-2">
-              <Heart className="w-5 h-5" />
-              <span>{artwork.likes} 좋아요</span>
-            </div>
+            <LikeButton
+              artworkId={artwork.id}
+              initialIsLiked={artwork.isLiked ?? false}
+              initialLikesCount={artwork.likes}
+              size="md"
+              showCount={true}
+            />
             <div className="flex items-center space-x-2">
               <Eye className="w-5 h-5" />
               <span>{artwork.views} 조회</span>
@@ -96,47 +98,14 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
                   </div>
                 </div>
 
-                <div className="bg-muted p-4 rounded-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Clock className="w-4 h-4" />
-                    <p className="text-sm font-semibold">남은 시간</p>
-                  </div>
-                  <div className="flex space-x-4 text-center">
-                    {(() => {
-                      const { days, hours, minutes } = getTimeRemaining(
-                        artwork.auctionEndTime
-                      );
-                      return (
-                        <>
-                          <div>
-                            <p className="text-2xl font-bold">{days}</p>
-                            <p className="text-xs text-muted-foreground">일</p>
-                          </div>
-                          <div>
-                            <p className="text-2xl font-bold">{hours}</p>
-                            <p className="text-xs text-muted-foreground">시간</p>
-                          </div>
-                          <div>
-                            <p className="text-2xl font-bold">{minutes}</p>
-                            <p className="text-xs text-muted-foreground">분</p>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
+                <AuctionCountdown endTime={artwork.auctionEndTime} />
 
-                <div className="flex space-x-2">
-                  <Input
-                    type="number"
-                    placeholder="입찰 금액을 입력하세요"
-                    className="flex-1"
-                  />
-                  <Button size="lg" className="w-32">
-                    <Gavel className="w-4 h-4 mr-2" />
-                    입찰하기
-                  </Button>
-                </div>
+                <BidForm
+                  artworkId={artwork.id}
+                  currentPrice={artwork.currentPrice!}
+                  auctionEndTime={artwork.auctionEndTime || null}
+                  status={artwork.status}
+                />
               </CardContent>
             </Card>
           ) : (
@@ -150,17 +119,28 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
                     {formatPrice(artwork.fixedPrice!)}
                   </p>
                 </div>
-                <Button size="lg" className="w-full">
-                  즉시 구매하기
-                </Button>
+                <PurchaseButton
+                  artworkId={artwork.id}
+                  artworkTitle={artwork.title}
+                  price={artwork.fixedPrice!}
+                  status={artwork.status}
+                />
               </CardContent>
             </Card>
           )}
 
-          <Button variant="outline" className="w-full" size="lg">
-            <Heart className="w-4 h-4 mr-2" />
-            관심 작품에 추가
-          </Button>
+          <div className="flex justify-center">
+            <LikeButton
+              artworkId={artwork.id}
+              initialIsLiked={artwork.isLiked ?? false}
+              initialLikesCount={artwork.likes}
+              size="lg"
+              showCount={false}
+            />
+            <span className="ml-2 text-lg">
+              {artwork.isLiked ? "관심 작품에서 제거" : "관심 작품에 추가"}
+            </span>
+          </div>
         </div>
       </div>
 

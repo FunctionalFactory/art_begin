@@ -28,6 +28,9 @@ export interface Artwork {
   isLiked?: boolean;
   status: "active" | "sold" | "upcoming";
   createdAt: Date;
+  // Bid info (for my-page bid history display)
+  userBidAmount?: number;
+  userBidStatus?: 'highest' | 'outbid';
 }
 
 export const artists: Artist[] = [

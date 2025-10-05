@@ -170,7 +170,7 @@ INSERT INTO public.artworks (
   NOW()
 ),
 (
-  'gggggggg-gggg-gggg-gggg-gggggggggggg',
+  '99999999-9999-9999-9999-999999999999',  -- g 대신 9 사용
   '22222222-2222-2222-2222-222222222222',
   '메트로폴리스',
   '대도시의 복잡함과 역동성을 기하학적 패턴으로 재구성했습니다.',
@@ -188,7 +188,7 @@ INSERT INTO public.artworks (
   NOW()
 ),
 (
-  'hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhhhhhh',
+  'aaaaaaab-aaaa-aaaa-aaaa-aaaaaaaaaaaa',  -- h 대신 유효한 UUID 사용
   '33333333-3333-3333-3333-333333333333',
   '오후의 차',
   '조용한 오후, 차 한 잔의 여유를 그림으로 담았습니다.',
@@ -206,7 +206,7 @@ INSERT INTO public.artworks (
   NOW()
 ),
 (
-  'iiiiiiii-iiii-iiii-iiii-iiiiiiiiiiii',
+  'aaaaaaac-aaaa-aaaa-aaaa-aaaaaaaaaaaa',  -- i 대신 유효한 UUID 사용
   '44444444-4444-4444-4444-444444444444',
   '숲의 교향곡',
   '숲 속에서 들리는 자연의 소리를 시각적으로 표현한 작품입니다.',
@@ -224,7 +224,7 @@ INSERT INTO public.artworks (
   NOW()
 ),
 (
-  'jjjjjjjj-jjjj-jjjj-jjjj-jjjjjjjjjjjj',
+  'aaaaaaad-aaaa-aaaa-aaaa-aaaaaaaaaaaa',  -- j 대신 유효한 UUID 사용
   '55555555-5555-5555-5555-555555555555',
   '내면의 여정',
   '자기 자신을 찾아가는 여정을 추상적으로 표현했습니다.',

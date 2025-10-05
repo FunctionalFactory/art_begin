@@ -1,16 +1,40 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArtworkCard } from "@/components/artwork-card";
-import { Badge } from "@/components/ui/badge";
-import { artworks } from "@/lib/data";
-import { Heart, Package, Gavel, Settings } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Heart, Package, Gavel, Settings, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/server";
+import { getFavoritesByUser, getUserBidArtworks, getProfileByUserId, getUserOrders } from "@/lib/queries";
+import { transformArtworkToLegacy } from "@/lib/utils/transform";
+import { MyPageClient } from "./my-page-client";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 
-export default function MyPage() {
-  // Mock data - would come from user session in real app
-  const favoriteArtworks = artworks.slice(0, 3);
-  const bidHistory = artworks.filter((a) => a.saleType === "auction").slice(0, 2);
-  const purchaseHistory = artworks.slice(3, 5);
+export default async function MyPage() {
+  // Get current user
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Get user profile to check role
+  const profile = await getProfileByUserId(user.id);
+  const isArtist = profile?.role === "artist";
+
+  // Fetch user's favorites from database
+  const favoritesDb = await getFavoritesByUser(user.id);
+  const favoriteArtworks = favoritesDb.map((fav) =>
+    transformArtworkToLegacy(fav.artwork, true)
+  );
+
+  // Fetch user's bid history from database
+  const bidsDb = await getUserBidArtworks(user.id);
+  const bidHistory = bidsDb.map((bid) =>
+    transformArtworkToLegacy(bid.artwork, undefined, bid.bid_amount, bid.status)
+  );
+
+  // Fetch user's order history from database
+  const orders = await getUserOrders(user.id);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -19,10 +43,22 @@ export default function MyPage() {
           <h1 className="text-4xl font-bold mb-2">마이페이지</h1>
           <p className="text-muted-foreground">내 활동과 관심 작품을 관리하세요</p>
         </div>
-        <Button variant="outline">
-          <Settings className="w-4 h-4 mr-2" />
-          설정
-        </Button>
+        <div className="flex gap-2">
+          {isArtist && (
+            <Link href="/artist-dashboard">
+              <Button variant="outline">
+                <Palette className="w-4 h-4 mr-2" />
+                작가 대시보드
+              </Button>
+            </Link>
+          )}
+          <Link href="/profile/edit">
+            <Button variant="outline">
+              <Settings className="w-4 h-4 mr-2" />
+              프로필 수정
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -53,172 +89,18 @@ export default function MyPage() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{purchaseHistory.length}</div>
+            <div className="text-2xl font-bold">{orders.length}</div>
             <p className="text-xs text-muted-foreground">구매한 작품</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="favorites" className="w-full">
-        <TabsList className="mb-8">
-          <TabsTrigger value="favorites">
-            <Heart className="w-4 h-4 mr-2" />
-            관심 작품
-          </TabsTrigger>
-          <TabsTrigger value="bids">
-            <Gavel className="w-4 h-4 mr-2" />
-            입찰 내역
-          </TabsTrigger>
-          <TabsTrigger value="orders">
-            <Package className="w-4 h-4 mr-2" />
-            주문 내역
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="favorites">
-          {favoriteArtworks.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {favoriteArtworks.map((artwork) => (
-                <ArtworkCard key={artwork.id} artwork={artwork} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  아직 관심 작품이 없습니다.
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  마음에 드는 작품에 좋아요를 눌러보세요!
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="bids">
-          {bidHistory.length > 0 ? (
-            <div className="space-y-4">
-              {bidHistory.map((artwork) => (
-                <Card key={artwork.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-4">
-                      <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
-                        <img
-                          src={artwork.imageUrl}
-                          alt={artwork.title}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1">
-                          {artwork.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {artwork.artistName}
-                        </p>
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">현재가</p>
-                            <p className="font-bold">
-                              {new Intl.NumberFormat("ko-KR").format(
-                                artwork.currentPrice!
-                              )}{" "}
-                              원
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">내 입찰가</p>
-                            <p className="font-bold text-primary">
-                              {new Intl.NumberFormat("ko-KR").format(
-                                artwork.currentPrice! - 10000
-                              )}{" "}
-                              원
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <Badge variant="destructive">입찰 중</Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Gavel className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  참여 중인 경매가 없습니다.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="orders">
-          {purchaseHistory.length > 0 ? (
-            <div className="space-y-4">
-              {purchaseHistory.map((artwork) => (
-                <Card key={artwork.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-4">
-                      <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
-                        <img
-                          src={artwork.imageUrl}
-                          alt={artwork.title}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1">
-                          {artwork.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {artwork.artistName}
-                        </p>
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">구매가</p>
-                            <p className="font-bold">
-                              {new Intl.NumberFormat("ko-KR").format(
-                                artwork.fixedPrice || artwork.currentPrice || 0
-                              )}{" "}
-                              원
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">구매일</p>
-                            <p className="text-sm">
-                              {artwork.createdAt.toLocaleDateString("ko-KR")}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <Badge>배송 중</Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  아직 구매한 작품이 없습니다.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+      <MyPageClient
+        favoriteArtworks={favoriteArtworks}
+        bidHistory={bidHistory}
+        orders={orders}
+      />
     </div>
   );
 }

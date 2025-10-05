@@ -121,3 +121,285 @@ export async function getAllArtworks(): Promise<ArtworkWithArtist[]> {
     artist: Array.isArray(artwork.artist) ? artwork.artist[0] : artwork.artist,
   })) as ArtworkWithArtist[];
 }
+
+/**
+ * Get artworks by artist user ID (not artist_id from artists table)
+ * First gets the artist record, then fetches artworks
+ */
+export async function getArtworksByArtistUserId(userId: string): Promise<ArtworkWithArtist[]> {
+  const supabase = await createClient();
+
+  // First, find the artist record for this user
+  const { data: artist, error: artistError } = await supabase
+    .from('artists')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (artistError || !artist) {
+    console.error('Error fetching artist for user:', artistError);
+    return [];
+  }
+
+  // Then fetch artworks for this artist
+  const { data, error } = await supabase
+    .from('artworks')
+    .select(`
+      *,
+      artist:artists (*)
+    `)
+    .eq('artist_id', artist.id)
+    .order('created_at', { ascending: false});
+
+  if (error) {
+    console.error('Error fetching artworks by user ID:', error);
+    return [];
+  }
+
+  return (data || []).map((artwork) => ({
+    ...artwork,
+    artist: Array.isArray(artwork.artist) ? artwork.artist[0] : artwork.artist,
+  })) as ArtworkWithArtist[];
+}
+
+/**
+ * Create new artwork
+ */
+export async function createArtwork(artworkData: {
+  artist_id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  category: string;
+  sale_type: 'auction' | 'fixed';
+  fixed_price?: number;
+  current_price?: number;
+  auction_end_time?: string;
+}): Promise<{ success: boolean; data?: Database.Artwork; error?: string }> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('artworks')
+    .insert(artworkData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating artwork:', error);
+    return {
+      success: false,
+      error: '작품 등록 중 오류가 발생했습니다.',
+    };
+  }
+
+  return {
+    success: true,
+    data,
+  };
+}
+
+/**
+ * Update artwork
+ */
+export async function updateArtwork(
+  artworkId: string,
+  artworkData: Partial<{
+    title: string;
+    description: string;
+    image_url: string;
+    category: string;
+    sale_type: 'auction' | 'fixed';
+    fixed_price: number;
+    current_price: number;
+    auction_end_time: string;
+    status: 'active' | 'sold' | 'upcoming';
+  }>
+): Promise<{ success: boolean; data?: Database.Artwork; error?: string }> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('artworks')
+    .update(artworkData)
+    .eq('id', artworkId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating artwork:', error);
+    return {
+      success: false,
+      error: '작품 수정 중 오류가 발생했습니다.',
+    };
+  }
+
+  return {
+    success: true,
+    data,
+  };
+}
+
+/**
+ * Delete artwork
+ */
+export async function deleteArtwork(
+  artworkId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('artworks')
+    .delete()
+    .eq('id', artworkId);
+
+  if (error) {
+    console.error('Error deleting artwork:', error);
+    return {
+      success: false,
+      error: '작품 삭제 중 오류가 발생했습니다.',
+    };
+  }
+
+  return {
+    success: true,
+  };
+}
+
+/**
+ * Search artworks with advanced filters
+ */
+export async function searchArtworks(params: {
+  searchQuery?: string;
+  category?: string;
+  saleType?: string;
+  priceMin?: number;
+  priceMax?: number;
+  artistId?: string;
+  sortBy?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ artworks: ArtworkWithArtist[]; totalCount: number }> {
+  const supabase = await createClient();
+
+  const {
+    searchQuery,
+    category,
+    saleType,
+    priceMin,
+    priceMax,
+    artistId,
+    sortBy = 'latest',
+    page = 1,
+    limit = 12,
+  } = params;
+
+  // Build query
+  let query = supabase
+    .from('artworks')
+    .select(`
+      *,
+      artist:artists (*)
+    `, { count: 'exact' })
+    .eq('status', 'active');
+
+  // Full-text search
+  if (searchQuery && searchQuery.trim()) {
+    query = query.textSearch('search_vector', searchQuery.trim(), {
+      type: 'websearch',
+      config: 'english',
+    });
+  }
+
+  // Category filter
+  if (category && category !== 'all') {
+    query = query.eq('category', category);
+  }
+
+  // Sale type filter
+  if (saleType && saleType !== 'all') {
+    query = query.eq('sale_type', saleType);
+  }
+
+  // Price range filter
+  if (priceMin !== undefined || priceMax !== undefined) {
+    // For auction items, filter by current_price
+    // For fixed items, filter by fixed_price
+    if (saleType === 'auction') {
+      if (priceMin !== undefined) {
+        query = query.gte('current_price', priceMin);
+      }
+      if (priceMax !== undefined) {
+        query = query.lte('current_price', priceMax);
+      }
+    } else if (saleType === 'fixed') {
+      if (priceMin !== undefined) {
+        query = query.gte('fixed_price', priceMin);
+      }
+      if (priceMax !== undefined) {
+        query = query.lte('fixed_price', priceMax);
+      }
+    } else {
+      // Filter both types
+      if (priceMin !== undefined) {
+        query = query.or(`current_price.gte.${priceMin},fixed_price.gte.${priceMin}`);
+      }
+      if (priceMax !== undefined) {
+        query = query.or(`current_price.lte.${priceMax},fixed_price.lte.${priceMax}`);
+      }
+    }
+  }
+
+  // Artist filter
+  if (artistId) {
+    query = query.eq('artist_id', artistId);
+  }
+
+  // Sorting
+  switch (sortBy) {
+    case 'latest':
+      query = query.order('created_at', { ascending: false });
+      break;
+    case 'popular':
+      query = query.order('likes', { ascending: false });
+      break;
+    case 'price-low':
+      query = query.order('current_price', { ascending: true, nullsFirst: false })
+        .order('fixed_price', { ascending: true, nullsFirst: false });
+      break;
+    case 'price-high':
+      query = query.order('current_price', { ascending: false, nullsFirst: false })
+        .order('fixed_price', { ascending: false, nullsFirst: false });
+      break;
+    case 'ending-soon':
+      query = query.eq('sale_type', 'auction')
+        .not('auction_end_time', 'is', null)
+        .order('auction_end_time', { ascending: true });
+      break;
+    case 'most-bids':
+      query = query.order('bid_count', { ascending: false });
+      break;
+    default:
+      query = query.order('created_at', { ascending: false });
+  }
+
+  // Pagination
+  const offset = (page - 1) * limit;
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('Error searching artworks:', error);
+    return { artworks: [], totalCount: 0 };
+  }
+
+  // Transform the data to match ArtworkWithArtist type
+  const artworks = (data || []).map((artwork) => ({
+    ...artwork,
+    artist: Array.isArray(artwork.artist) ? artwork.artist[0] : artwork.artist,
+  })) as ArtworkWithArtist[];
+
+  return {
+    artworks,
+    totalCount: count || 0,
+  };
+}

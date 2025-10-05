@@ -35,6 +35,35 @@ export namespace Database {
   export interface Profile {
     id: string;
     role: 'buyer' | 'artist';
+    username: string | null;
+    display_name: string | null;
+    bio: string | null;
+    profile_image: string | null;
+    created_at: string;
+    updated_at: string;
+  }
+
+  export interface Favorite {
+    user_id: string;
+    artwork_id: string;
+    created_at: string;
+  }
+
+  export interface Bid {
+    id: string;
+    artwork_id: string;
+    user_id: string;
+    bid_amount: number;
+    created_at: string;
+  }
+
+  export interface Order {
+    id: string;
+    user_id: string;
+    artwork_id: string;
+    order_type: 'purchase' | 'auction';
+    price: number;
+    status: 'pending' | 'preparing' | 'shipping' | 'delivered' | 'completed';
     created_at: string;
     updated_at: string;
   }
@@ -44,6 +73,29 @@ export namespace Database {
 
 export interface ArtworkWithArtist extends Database.Artwork {
   artist: Database.Artist;
+}
+
+export interface FavoriteWithArtwork extends Database.Favorite {
+  artwork: ArtworkWithArtist;
+}
+
+export interface ArtworkWithLikeStatus extends ArtworkWithArtist {
+  is_liked: boolean;
+}
+
+export interface BidWithArtwork extends Database.Bid {
+  artwork: ArtworkWithArtist;
+}
+
+export type BidStatus = 'highest' | 'outbid';
+
+export interface OrderWithArtwork extends Database.Order {
+  artwork: ArtworkWithArtist;
+}
+
+export interface OrderWithDetails extends Database.Order {
+  artwork: ArtworkWithArtist;
+  buyer_email?: string;
 }
 
 // Helper types for computed fields
@@ -83,4 +135,7 @@ export interface Artwork {
   isLiked?: boolean;
   status: "active" | "sold" | "upcoming";
   createdAt: Date;
+  // Bid info (for my-page bid history display)
+  userBidAmount?: number;
+  userBidStatus?: 'highest' | 'outbid';
 }

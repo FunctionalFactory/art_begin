@@ -3,9 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
+import { LikeButton } from "@/components/like-button";
+import { CountdownTimer } from "@/components/countdown-timer";
 import type { Artwork } from "@/lib/data";
 
 interface ArtworkCardProps {
@@ -19,38 +22,36 @@ export function ArtworkCard({ artwork }: ArtworkCardProps) {
     return new Intl.NumberFormat("ko-KR").format(price) + " 원";
   };
 
-  const getTimeRemaining = (endTime: Date) => {
-    const now = new Date();
-    const diff = endTime.getTime() - now.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-    if (days > 0) return `${days}일 남음`;
-    if (hours > 0) return `${hours}시간 남음`;
-    return "마감 임박";
-  };
-
   const handleCardClick = () => {
     router.push(`/artwork/${artwork.id}`);
   };
 
   return (
     <Card
-      className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full"
+      className="group overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full"
       onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      aria-label={`${artwork.title} by ${artwork.artistName} - ${artwork.saleType === "auction" ? "경매" : "즉시 구매"}`}
     >
-      <div className="relative aspect-square">
+      <div className="relative aspect-square overflow-hidden">
         <Image
           src={artwork.imageUrl}
-          alt={artwork.title}
+          alt={`${artwork.title} 작품 이미지`}
           fill
-          className="object-cover"
+          className="object-cover group-hover:scale-110 transition-transform duration-300"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
         {artwork.saleType === "auction" && artwork.auctionEndTime && (
           <div className="absolute top-2 right-2">
             <Badge variant="destructive">
-              {getTimeRemaining(artwork.auctionEndTime)}
+              <CountdownTimer endTime={artwork.auctionEndTime} />
             </Badge>
           </div>
         )}
@@ -86,11 +87,14 @@ export function ArtworkCard({ artwork }: ArtworkCardProps) {
           )}
         </div>
         <div className="flex items-center space-x-3 text-sm text-muted-foreground">
-          <div className="flex items-center space-x-1">
-            <Heart className="w-4 h-4" />
-            <span>{artwork.likes}</span>
-          </div>
-          <div className="flex items-center space-x-1">
+          <LikeButton
+            artworkId={artwork.id}
+            initialIsLiked={artwork.isLiked ?? false}
+            initialLikesCount={artwork.likes}
+            size="sm"
+            showCount={true}
+          />
+          <div className="flex items-center space-x-1 transition-colors hover:text-foreground">
             <Eye className="w-4 h-4" />
             <span>{artwork.views}</span>
           </div>

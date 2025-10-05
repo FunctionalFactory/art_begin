@@ -3,7 +3,12 @@
 import type { Database, ArtworkWithArtist, ArtistWithStats } from '@/lib/types';
 import type { Artwork, Artist } from '@/lib/data';
 
-export function transformArtworkToLegacy(dbArtwork: ArtworkWithArtist): Artwork {
+export function transformArtworkToLegacy(
+  dbArtwork: ArtworkWithArtist,
+  isLiked?: boolean,
+  userBidAmount?: number,
+  userBidStatus?: 'highest' | 'outbid'
+): Artwork {
   return {
     id: dbArtwork.id,
     title: dbArtwork.title,
@@ -21,8 +26,11 @@ export function transformArtworkToLegacy(dbArtwork: ArtworkWithArtist): Artwork 
     bidCount: dbArtwork.bid_count,
     views: dbArtwork.views,
     likes: dbArtwork.likes,
+    isLiked,
     status: dbArtwork.status,
     createdAt: new Date(dbArtwork.created_at),
+    userBidAmount,
+    userBidStatus,
   };
 }
 
