@@ -163,6 +163,23 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
             </div>
           </div>
 
+          {/* Artwork Info */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4">작품 정보</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">카테고리</p>
+                <p className="font-semibold">{artwork.category}</p>
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">제작일</p>
+                <p className="font-semibold">
+                  {artwork.createdAt.toLocaleDateString("ko-KR")}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Price and Auction Info */}
           {artwork.saleType === "auction" && artwork.auctionEndTime ? (
             <Card>
@@ -211,18 +228,6 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
             </Card>
           )}
 
-          <div className="flex justify-center">
-            <LikeButton
-              artworkId={artwork.id}
-              initialIsLiked={artwork.isLiked ?? false}
-              initialLikesCount={artwork.likes}
-              size="lg"
-              showCount={false}
-            />
-            <span className="ml-2 text-lg">
-              {artwork.isLiked ? "관심 작품에서 제거" : "관심 작품에 추가"}
-            </span>
-          </div>
         </div>
       </div>
 
@@ -234,22 +239,6 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
             <p className="text-muted-foreground leading-relaxed">
               {artwork.description}
             </p>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-bold mb-4">작품 정보</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">카테고리</p>
-                <p className="font-semibold">{artwork.category}</p>
-              </div>
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">제작일</p>
-                <p className="font-semibold">
-                  {artwork.createdAt.toLocaleDateString("ko-KR")}
-                </p>
-              </div>
-            </div>
           </div>
 
           {/* Bid History (for auction items) */}
