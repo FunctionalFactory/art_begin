@@ -18,6 +18,7 @@ export namespace Database {
     title: string;
     description: string | null;
     image_url: string;
+    images?: string[] | null;
     category: string;
     current_price: number | null;
     fixed_price: number | null;
@@ -122,6 +123,7 @@ export interface Artwork {
   artistName: string;
   artistUsername: string;
   imageUrl: string;
+  images?: string[];
   description: string;
   category: string;
   currentPrice?: number;
