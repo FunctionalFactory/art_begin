@@ -37,6 +37,13 @@ pids
 # Coverage directory used by tools like istanbul
 coverage/
 
+# Test results
+test-results/
+playwright-report/
+
+# Worktree folders
+worktree/
+
 # Temporary folders
 tmp/
 temp/
