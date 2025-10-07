@@ -31,6 +31,13 @@ export async function Header() {
               Explore
             </Link>
             <Link
+              href="/genres"
+              className="text-sm font-medium hover:text-primary transition-colors"
+              aria-label="장르별 작품"
+            >
+              Genres
+            </Link>
+            <Link
               href="/artists"
               className="text-sm font-medium hover:text-primary transition-colors"
               aria-label="작가 목록"

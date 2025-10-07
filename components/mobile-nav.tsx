@@ -53,6 +53,13 @@ export function MobileNav({ user, isArtist }: MobileNavProps) {
             Explore
           </Link>
           <Link
+            href="/genres"
+            onClick={closeSheet}
+            className="text-lg font-medium hover:text-primary transition-colors py-2"
+          >
+            Genres
+          </Link>
+          <Link
             href="/artists"
             onClick={closeSheet}
             className="text-lg font-medium hover:text-primary transition-colors py-2"
