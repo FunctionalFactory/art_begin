@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Package, Gavel, Settings, Palette, Wallet } from "lucide-react";
+import { Heart, Package, Gavel, Settings, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/server";
 import { getFavoritesByUser, getUserBidArtworks, getProfileByUserId, getUserOrders } from "@/lib/queries";
@@ -7,7 +7,7 @@ import { transformArtworkToLegacy } from "@/lib/utils/transform";
 import { MyPageClient } from "./my-page-client";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { formatPrice } from "@/lib/utils/auction";
+import { BalanceSummary } from "@/components/balance-summary";
 
 export default async function MyPage() {
   // Get current user
@@ -18,17 +18,9 @@ export default async function MyPage() {
     redirect("/login");
   }
 
-  // Get user profile to check role and balance
+  // Get user profile to check role
   const profile = await getProfileByUserId(user.id);
   const isArtist = profile?.role === "artist";
-
-  // Get user balance
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("balance")
-    .eq("id", user.id)
-    .single();
-  const userBalance = profileData?.balance ?? 0;
 
   // Fetch user's favorites from database
   const favoritesDb = await getFavoritesByUser(user.id);
@@ -70,25 +62,21 @@ export default async function MyPage() {
         </div>
       </div>
 
+      {/* Balance Summary with Escrow */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">잔고 현황</h2>
+          <Link href="/balance">
+            <Button variant="outline" size="sm">
+              충전하기
+            </Button>
+          </Link>
+        </div>
+        <BalanceSummary userId={user.id} />
+      </div>
+
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">보유 잔고</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(userBalance)}</div>
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-muted-foreground">사용 가능한 금액</p>
-              <Link href="/balance">
-                <Button variant="link" size="sm" className="h-auto p-0 text-xs">
-                  충전하기 →
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">관심 작품</CardTitle>

@@ -14,6 +14,7 @@ import {
   getRelatedArtworksByCategory,
 } from "@/lib/queries";
 import { getRecentBids } from "@/lib/queries/bids";
+import { getBalanceInfo } from "@/lib/queries/balance";
 import { transformArtworkToLegacy, transformArtistToLegacy } from "@/lib/utils/transform";
 import { LikeButton } from "@/components/like-button";
 import { BidForm } from "@/components/bid-form";
@@ -94,15 +95,11 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   const isLiked = await checkIsFavorited(user?.id, id);
 
-  // Get user balance for bid form
-  let userBalance = 0;
+  // Get user available balance for bid form (using escrow system)
+  let availableBalance = 0;
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("balance")
-      .eq("id", user.id)
-      .single();
-    userBalance = profile?.balance ?? 0;
+    const balanceInfo = await getBalanceInfo(user.id);
+    availableBalance = balanceInfo.availableBalance;
   }
 
   // Transform DB data to legacy format
@@ -217,7 +214,7 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
                   currentPrice={artwork.currentPrice!}
                   auctionEndTime={artwork.auctionEndTime || null}
                   status={artwork.status}
-                  userBalance={userBalance}
+                  availableBalance={availableBalance}
                 />
               </CardContent>
             </Card>

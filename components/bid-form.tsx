@@ -19,7 +19,7 @@ interface BidFormProps {
   currentPrice: number;
   auctionEndTime: Date | null;
   status?: "active" | "sold" | "upcoming";
-  userBalance?: number;
+  availableBalance?: number;
 }
 
 const MIN_BID_INCREMENT = 10000;
@@ -29,7 +29,7 @@ export function BidForm({
   currentPrice,
   auctionEndTime,
   status = "active",
-  userBalance = 0,
+  availableBalance = 0,
 }: BidFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -56,9 +56,9 @@ export function BidForm({
   // Check if balance is insufficient
   const bidAmountNum = parseInt(bidAmount, 10);
   const isInsufficientBalance =
-    !isNaN(bidAmountNum) && bidAmountNum > 0 && bidAmountNum > userBalance;
+    !isNaN(bidAmountNum) && bidAmountNum > 0 && bidAmountNum > availableBalance;
   const shortfallAmount = isInsufficientBalance
-    ? bidAmountNum - userBalance
+    ? bidAmountNum - availableBalance
     : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,14 +127,14 @@ export function BidForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-      {/* Balance Display */}
-      {userBalance > 0 && (
+      {/* Available Balance Display */}
+      {availableBalance > 0 && (
         <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">보유 잔고</p>
-              <p className="text-sm font-semibold">{formatPrice(userBalance)}</p>
+              <p className="text-xs text-muted-foreground">사용 가능 잔고</p>
+              <p className="text-sm font-semibold">{formatPrice(availableBalance)}</p>
             </div>
           </div>
           <Link href="/balance">
@@ -142,6 +142,23 @@ export function BidForm({
               충전하기
             </Button>
           </Link>
+        </div>
+      )}
+
+      {/* Escrow Warning */}
+      {bidAmount && !isNaN(parseInt(bidAmount, 10)) && parseInt(bidAmount, 10) > 0 && (
+        <div className="p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-orange-800 dark:text-orange-300">
+                입찰 시 이 금액이 에스크로로 묶입니다
+              </p>
+              <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                다른 사용자가 더 높은 입찰을 하거나 경매가 종료되면 자동으로 해제됩니다.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -227,7 +244,7 @@ export function BidForm({
                   잔고가 부족합니다
                 </p>
                 <p className="text-xs text-destructive mt-1">
-                  현재 잔고: {formatPrice(userBalance)} | 필요 금액:{" "}
+                  사용 가능 잔고: {formatPrice(availableBalance)} | 필요 금액:{" "}
                   {formatPrice(bidAmountNum)}
                 </p>
                 <p className="text-xs text-destructive mt-1">
