@@ -5,6 +5,7 @@ import {
   getRecentBids,
   getUserBidsWithStatus,
   getUserBidArtworks,
+  getActiveEscrowBids,
 } from "../bids";
 import { createClient } from "@/utils/supabase/server";
 import type { BidWithArtwork, Database } from "@/lib/types";
@@ -918,6 +919,234 @@ describe("Bids Queries", () => {
       expect(result.find((r) => r.artwork_id === "artwork-2")?.status).toBe(
         "outbid"
       );
+    });
+  });
+
+  describe("getActiveEscrowBids()", () => {
+    it("should return only bids with escrow_status = active", async () => {
+      const mockData = [
+        {
+          ...mockBid,
+          escrow_status: "active",
+          escrow_amount: 1000,
+          artwork: { ...mockArtwork, artist: mockArtist },
+        },
+      ];
+
+      const orderMock = jest.fn().mockResolvedValue({
+        data: mockData,
+        error: null,
+      });
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: orderMock,
+            }),
+          }),
+        }),
+      });
+
+      const result = await getActiveEscrowBids("user-1");
+
+      expect(result).toHaveLength(1);
+      expect(result[0].escrowAmount).toBe(1000);
+      expect(orderMock).toHaveBeenCalledWith("created_at", { ascending: false });
+    });
+
+    it("should filter by user_id and escrow_status", async () => {
+      const eqMocks = [jest.fn(), jest.fn()];
+      eqMocks[0].mockReturnValue({
+        eq: eqMocks[1],
+      });
+      eqMocks[1].mockReturnValue({
+        order: jest.fn().mockResolvedValue({
+          data: [],
+          error: null,
+        }),
+      });
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: eqMocks[0],
+        }),
+      });
+
+      await getActiveEscrowBids("user-1");
+
+      expect(eqMocks[0]).toHaveBeenCalledWith("user_id", "user-1");
+      expect(eqMocks[1]).toHaveBeenCalledWith("escrow_status", "active");
+    });
+
+    it("should return empty array when no active escrow bids exist", async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: [],
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getActiveEscrowBids("user-1");
+
+      expect(result).toEqual([]);
+    });
+
+    it("should return empty array on error", async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: null,
+                error: { message: "Database error" },
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getActiveEscrowBids("user-1");
+
+      expect(result).toEqual([]);
+    });
+
+    it("should include artwork and artist information", async () => {
+      const mockData = [
+        {
+          ...mockBid,
+          escrow_status: "active",
+          escrow_amount: 1500,
+          artwork: { ...mockArtwork, artist: mockArtist },
+        },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: mockData,
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getActiveEscrowBids("user-1");
+
+      expect(result[0].artwork).toBeDefined();
+      expect(result[0].artwork.artist).toEqual(mockArtist);
+    });
+
+    it("should handle nested artwork array transformation", async () => {
+      const mockData = [
+        {
+          ...mockBid,
+          escrow_status: "active",
+          escrow_amount: 2000,
+          artwork: [
+            {
+              ...mockArtwork,
+              artist: [mockArtist],
+            },
+          ],
+        },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: mockData,
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getActiveEscrowBids("user-1");
+
+      expect(result[0].artwork).toBeDefined();
+      expect(result[0].artwork.artist).toEqual(mockArtist);
+      expect(result[0].escrowAmount).toBe(2000);
+    });
+
+    it("should handle null escrow_amount", async () => {
+      const mockData = [
+        {
+          ...mockBid,
+          escrow_status: "active",
+          escrow_amount: null,
+          artwork: { ...mockArtwork, artist: mockArtist },
+        },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: mockData,
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getActiveEscrowBids("user-1");
+
+      expect(result[0].escrowAmount).toBe(0);
+    });
+
+    it("should return multiple active escrow bids sorted by created_at", async () => {
+      const mockData = [
+        {
+          ...mockBid,
+          id: "bid-1",
+          escrow_status: "active",
+          escrow_amount: 1000,
+          created_at: "2024-01-03T00:00:00Z",
+          artwork: { ...mockArtwork, artist: mockArtist },
+        },
+        {
+          ...mockBid,
+          id: "bid-2",
+          escrow_status: "active",
+          escrow_amount: 2000,
+          created_at: "2024-01-02T00:00:00Z",
+          artwork: { ...mockArtwork, artist: mockArtist },
+        },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: mockData,
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getActiveEscrowBids("user-1");
+
+      expect(result).toHaveLength(2);
+      expect(result[0].created_at).toBe("2024-01-03T00:00:00Z");
+      expect(result[1].created_at).toBe("2024-01-02T00:00:00Z");
     });
   });
 });
