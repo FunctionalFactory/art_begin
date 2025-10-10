@@ -55,6 +55,7 @@ export namespace Database {
     artwork_id: string;
     user_id: string;
     bid_amount: number;
+    buyer_premium_rate?: number; // Buyer's premium rate (e.g., 0.10 = 10%)
     created_at: string;
   }
 
@@ -141,3 +142,6 @@ export interface Artwork {
   userBidAmount?: number;
   userBidStatus?: 'highest' | 'outbid';
 }
+
+// Re-export auction utility types for centralized type management
+export type { BidBreakdown } from './utils/auction';

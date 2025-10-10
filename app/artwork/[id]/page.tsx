@@ -186,7 +186,9 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">현재가</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      현재가 (수수료 포함)
+                    </p>
                     <p className="text-3xl font-bold text-primary">
                       {formatPrice(artwork.currentPrice!)}
                     </p>

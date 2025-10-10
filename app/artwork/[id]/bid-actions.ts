@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { getBuyerPremiumRate } from "@/lib/utils/auction";
 
 // Minimum bid increment in KRW
 const MIN_BID_INCREMENT = 10000;
@@ -74,11 +75,27 @@ export async function placeBid(artworkId: string, bidAmount: number) {
     };
   }
 
-  // 6. Insert bid record
+  // 6. Get buyer's premium rate
+  const buyerPremiumRate = getBuyerPremiumRate();
+
+  // TODO: Balance system integration
+  // When balance system is implemented, add balance verification here:
+  // const userBalance = await getUserBalance(user.id);
+  // if (userBalance < bidAmount) {
+  //   return {
+  //     success: false,
+  //     error: "잔고가 부족합니다.",
+  //     requiredBalance: bidAmount,
+  //     currentBalance: userBalance,
+  //   };
+  // }
+
+  // 7. Insert bid record
   const { error: insertError } = await supabase.from("bids").insert({
     artwork_id: artworkId,
     user_id: user.id,
     bid_amount: bidAmount,
+    buyer_premium_rate: buyerPremiumRate,
   });
 
   if (insertError) {
@@ -89,14 +106,14 @@ export async function placeBid(artworkId: string, bidAmount: number) {
     };
   }
 
-  // 7. Get updated artwork info (trigger will have updated it)
+  // 8. Get updated artwork info (trigger will have updated it)
   const { data: updatedArtwork } = await supabase
     .from("artworks")
     .select("current_price, bid_count, highest_bidder")
     .eq("id", artworkId)
     .single();
 
-  // 8. Revalidate paths to update UI
+  // 9. Revalidate paths to update UI
   revalidatePath("/");
   revalidatePath("/explore");
   revalidatePath(`/artwork/${artworkId}`);

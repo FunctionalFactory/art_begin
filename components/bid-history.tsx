@@ -1,10 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  calculateHammerPrice,
+  calculateBuyerPremium,
+} from "@/lib/utils/auction";
 
 export interface BidHistoryItem {
   id: string;
   bidAmount: number;
+  buyerPremiumRate?: number;
   createdAt: Date;
   userId: string;
   isCurrentUser: boolean;
@@ -87,8 +92,29 @@ export function BidHistory({ bids }: BidHistoryProps) {
                   {formatTime(bid.createdAt)}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-right space-y-0.5">
                 <p className="font-semibold">{formatPrice(bid.bidAmount)}</p>
+                {bid.buyerPremiumRate && bid.buyerPremiumRate > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    작품가{" "}
+                    {formatPrice(
+                      calculateHammerPrice(
+                        bid.bidAmount,
+                        bid.buyerPremiumRate
+                      )
+                    )}{" "}
+                    + 수수료{" "}
+                    {formatPrice(
+                      calculateBuyerPremium(
+                        calculateHammerPrice(
+                          bid.bidAmount,
+                          bid.buyerPremiumRate
+                        ),
+                        bid.buyerPremiumRate
+                      )
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           </div>

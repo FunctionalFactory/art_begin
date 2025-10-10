@@ -15,6 +15,7 @@ export async function getBidsByUser(userId: string): Promise<BidWithArtwork[]> {
       artwork_id,
       user_id,
       bid_amount,
+      buyer_premium_rate,
       created_at,
       artwork:artworks (
         *,
@@ -54,6 +55,7 @@ export async function getBidsByUser(userId: string): Promise<BidWithArtwork[]> {
       artwork_id: bid.artwork_id,
       user_id: bid.user_id,
       bid_amount: bid.bid_amount,
+      buyer_premium_rate: bid.buyer_premium_rate,
       created_at: bid.created_at,
       artwork: {
         ...artwork,
@@ -129,6 +131,7 @@ export async function getRecentBids(
 ): Promise<Array<{
   id: string;
   bidAmount: number;
+  buyerPremiumRate?: number;
   createdAt: Date;
   userId: string;
   isCurrentUser: boolean;
@@ -160,6 +163,7 @@ export async function getRecentBids(
   return data.map((bid) => ({
     id: bid.id,
     bidAmount: bid.bid_amount,
+    buyerPremiumRate: bid.buyer_premium_rate,
     createdAt: new Date(bid.created_at),
     userId: bid.user_id,
     isCurrentUser: currentUserId ? bid.user_id === currentUserId : false,

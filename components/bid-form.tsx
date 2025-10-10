@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Gavel } from "lucide-react";
 import { placeBid } from "@/app/artwork/[id]/bid-actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import {
+  formatBidBreakdown,
+  getBuyerPremiumRate,
+  formatPrice,
+} from "@/lib/utils/auction";
 
 interface BidFormProps {
   artworkId: string;
@@ -29,6 +34,16 @@ export function BidForm({
   const [error, setError] = useState<string>("");
 
   const minBidAmount = currentPrice + MIN_BID_INCREMENT;
+  const buyerPremiumRate = getBuyerPremiumRate();
+
+  // Calculate bid breakdown for real-time display
+  const bidBreakdown = useMemo(() => {
+    const amount = parseInt(bidAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      return null;
+    }
+    return formatBidBreakdown(amount, buyerPremiumRate);
+  }, [bidAmount, buyerPremiumRate]);
 
   // Check if auction has ended
   const isAuctionEnded = auctionEndTime
@@ -102,13 +117,19 @@ export function BidForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
       <div>
-        <p className="text-sm text-muted-foreground mb-2">
-          최소 입찰가: {minBidAmount.toLocaleString("ko-KR")}원
-        </p>
+        <div className="mb-3">
+          <p className="text-sm text-muted-foreground mb-1">
+            최소 입찰가: {minBidAmount.toLocaleString("ko-KR")}원
+          </p>
+          <p className="text-xs text-muted-foreground">
+            입찰가에는 {(buyerPremiumRate * 100).toFixed(0)}% 수수료가
+            포함됩니다
+          </p>
+        </div>
         <div className="flex space-x-2">
           <Input
             type="number"
-            placeholder="입찰 금액을 입력하세요"
+            placeholder="입찰 금액을 입력하세요 (수수료 포함)"
             className="flex-1"
             value={bidAmount}
             onChange={(e) => {
@@ -135,6 +156,38 @@ export function BidForm({
             )}
           </Button>
         </div>
+
+        {/* Real-time bid breakdown display */}
+        {bidBreakdown && (
+          <div className="mt-3 p-3 bg-muted rounded-md">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">
+              입찰 금액 상세
+            </p>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">작품가</span>
+                <span className="font-medium">
+                  {formatPrice(bidBreakdown.hammerPrice)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  수수료 ({(buyerPremiumRate * 100).toFixed(0)}%)
+                </span>
+                <span className="font-medium">
+                  {formatPrice(bidBreakdown.buyerPremium)}
+                </span>
+              </div>
+              <div className="flex justify-between pt-1 border-t">
+                <span className="font-semibold">총 지불 금액</span>
+                <span className="font-semibold">
+                  {formatPrice(bidBreakdown.totalBid)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {error && (
           <p className="text-sm text-destructive mt-2">{error}</p>
         )}
