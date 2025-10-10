@@ -3,10 +3,11 @@
 import { useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Gavel } from "lucide-react";
+import { Gavel, Wallet, AlertTriangle } from "lucide-react";
 import { placeBid } from "@/app/artwork/[id]/bid-actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   formatBidBreakdown,
   getBuyerPremiumRate,
@@ -18,6 +19,7 @@ interface BidFormProps {
   currentPrice: number;
   auctionEndTime: Date | null;
   status?: "active" | "sold" | "upcoming";
+  userBalance?: number;
 }
 
 const MIN_BID_INCREMENT = 10000;
@@ -27,6 +29,7 @@ export function BidForm({
   currentPrice,
   auctionEndTime,
   status = "active",
+  userBalance = 0,
 }: BidFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -49,6 +52,14 @@ export function BidForm({
   const isAuctionEnded = auctionEndTime
     ? new Date() > new Date(auctionEndTime)
     : false;
+
+  // Check if balance is insufficient
+  const bidAmountNum = parseInt(bidAmount, 10);
+  const isInsufficientBalance =
+    !isNaN(bidAmountNum) && bidAmountNum > 0 && bidAmountNum > userBalance;
+  const shortfallAmount = isInsufficientBalance
+    ? bidAmountNum - userBalance
+    : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +127,24 @@ export function BidForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+      {/* Balance Display */}
+      {userBalance > 0 && (
+        <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-muted-foreground" />
+            <div>
+              <p className="text-xs text-muted-foreground">보유 잔고</p>
+              <p className="text-sm font-semibold">{formatPrice(userBalance)}</p>
+            </div>
+          </div>
+          <Link href="/balance">
+            <Button variant="outline" size="sm" type="button">
+              충전하기
+            </Button>
+          </Link>
+        </div>
+      )}
+
       <div>
         <div className="mb-3">
           <p className="text-sm text-muted-foreground mb-1">
@@ -183,6 +212,37 @@ export function BidForm({
                 <span className="font-semibold">
                   {formatPrice(bidBreakdown.totalBid)}
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Insufficient Balance Warning */}
+        {isInsufficientBalance && (
+          <div className="mt-3 p-3 bg-destructive/10 border border-destructive rounded-md">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-destructive font-semibold">
+                  잔고가 부족합니다
+                </p>
+                <p className="text-xs text-destructive mt-1">
+                  현재 잔고: {formatPrice(userBalance)} | 필요 금액:{" "}
+                  {formatPrice(bidAmountNum)}
+                </p>
+                <p className="text-xs text-destructive mt-1">
+                  부족한 금액: {formatPrice(shortfallAmount)}
+                </p>
+                <Link href="/balance" className="inline-block mt-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    type="button"
+                    className="h-8"
+                  >
+                    잔고 충전하기
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

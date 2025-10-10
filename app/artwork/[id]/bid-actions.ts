@@ -78,52 +78,55 @@ export async function placeBid(artworkId: string, bidAmount: number) {
   // 6. Get buyer's premium rate
   const buyerPremiumRate = getBuyerPremiumRate();
 
-  // TODO: Balance system integration
-  // When balance system is implemented, add balance verification here:
-  // const userBalance = await getUserBalance(user.id);
-  // if (userBalance < bidAmount) {
-  //   return {
-  //     success: false,
-  //     error: "잔고가 부족합니다.",
-  //     requiredBalance: bidAmount,
-  //     currentBalance: userBalance,
-  //   };
-  // }
-
-  // 7. Insert bid record
-  const { error: insertError } = await supabase.from("bids").insert({
-    artwork_id: artworkId,
-    user_id: user.id,
-    bid_amount: bidAmount,
-    buyer_premium_rate: buyerPremiumRate,
+  // 7. Call PostgreSQL function for atomic bid + balance deduction
+  const { data, error } = await supabase.rpc("place_bid_with_balance", {
+    p_artwork_id: artworkId,
+    p_bid_amount: bidAmount,
+    p_buyer_premium_rate: buyerPremiumRate,
   });
 
-  if (insertError) {
-    console.error("Error inserting bid:", insertError);
+  // 8. Handle errors from RPC function
+  if (error) {
+    console.error("Bid RPC error:", error);
     return {
       success: false,
       error: "입찰 처리 중 오류가 발생했습니다. 다시 시도해주세요.",
     };
   }
 
-  // 8. Get updated artwork info (trigger will have updated it)
+  // 9. Check if RPC function returned an error
+  if (data && !data.success) {
+    return {
+      success: false,
+      error: data.error || "입찰에 실패했습니다.",
+      requiredBalance: data.requiredBalance,
+      currentBalance: data.currentBalance,
+      minBidAmount: data.minBidAmount,
+      currentPrice: data.currentPrice,
+    };
+  }
+
+  // 10. Get updated artwork info (trigger will have updated it)
   const { data: updatedArtwork } = await supabase
     .from("artworks")
     .select("current_price, bid_count, highest_bidder")
     .eq("id", artworkId)
     .single();
 
-  // 9. Revalidate paths to update UI
+  // 11. Revalidate paths to update UI
   revalidatePath("/");
   revalidatePath("/explore");
   revalidatePath(`/artwork/${artworkId}`);
   revalidatePath("/my-page");
+  revalidatePath("/balance");
+  revalidatePath("/balance/history");
 
   return {
     success: true,
-    message: "입찰이 완료되었습니다!",
+    message: data?.message || "입찰이 완료되었습니다!",
     currentPrice: updatedArtwork?.current_price || bidAmount,
     bidCount: updatedArtwork?.bid_count || 0,
     isHighestBidder: updatedArtwork?.highest_bidder === user.id,
+    newBalance: data?.balance,
   };
 }

@@ -40,6 +40,7 @@ export namespace Database {
     display_name: string | null;
     bio: string | null;
     profile_image: string | null;
+    balance?: number;
     created_at: string;
     updated_at: string;
   }
@@ -68,6 +69,17 @@ export namespace Database {
     status: 'pending' | 'preparing' | 'shipping' | 'delivered' | 'completed';
     created_at: string;
     updated_at: string;
+  }
+
+  export interface BalanceTransaction {
+    id: string;
+    user_id: string;
+    amount: number;  // Positive for deposit, negative for deduction
+    balance_after: number;  // Balance after transaction (audit trail)
+    transaction_type: 'deposit' | 'bid' | 'refund';
+    reference_id: string | null;  // Reference to bid_id, order_id, etc.
+    description: string | null;
+    created_at: string;
   }
 }
 

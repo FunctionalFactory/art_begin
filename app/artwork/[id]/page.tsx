@@ -94,6 +94,17 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   const isLiked = await checkIsFavorited(user?.id, id);
 
+  // Get user balance for bid form
+  let userBalance = 0;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("balance")
+      .eq("id", user.id)
+      .single();
+    userBalance = profile?.balance ?? 0;
+  }
+
   // Transform DB data to legacy format
   const artwork = transformArtworkToLegacy(artworkDb, isLiked);
   const artist = transformArtistToLegacy(artworkDb.artist);
@@ -206,6 +217,7 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
                   currentPrice={artwork.currentPrice!}
                   auctionEndTime={artwork.auctionEndTime || null}
                   status={artwork.status}
+                  userBalance={userBalance}
                 />
               </CardContent>
             </Card>
