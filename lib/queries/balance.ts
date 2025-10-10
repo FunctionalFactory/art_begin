@@ -144,3 +144,66 @@ export async function getBalanceTransactionsByType(
 
   return data || [];
 }
+
+/**
+ * Get user's total escrow amount (locked in active bids)
+ * @param userId - User's ID
+ * @returns Total escrow amount
+ */
+export async function getUserEscrowTotal(userId: string): Promise<number> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("get_user_escrow_total", {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.error("Error fetching user escrow total:", error);
+    return 0;
+  }
+
+  return data ?? 0;
+}
+
+/**
+ * Get user's available balance (total balance - escrow)
+ * @param userId - User's ID
+ * @returns Available balance
+ */
+export async function getUserAvailableBalance(userId: string): Promise<number> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("get_user_available_balance", {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.error("Error fetching user available balance:", error);
+    return 0;
+  }
+
+  return data ?? 0;
+}
+
+/**
+ * Get comprehensive balance info (total, escrow, available)
+ * @param userId - User's ID
+ * @returns Object containing totalBalance, escrowTotal, and availableBalance
+ */
+export async function getBalanceInfo(userId: string): Promise<{
+  totalBalance: number;
+  escrowTotal: number;
+  availableBalance: number;
+}> {
+  const [totalBalance, escrowTotal, availableBalance] = await Promise.all([
+    getUserBalance(userId),
+    getUserEscrowTotal(userId),
+    getUserAvailableBalance(userId),
+  ]);
+
+  return {
+    totalBalance: totalBalance ?? 0,
+    escrowTotal,
+    availableBalance,
+  };
+}

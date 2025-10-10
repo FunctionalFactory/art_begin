@@ -57,6 +57,9 @@ export namespace Database {
     user_id: string;
     bid_amount: number;
     buyer_premium_rate?: number; // Buyer's premium rate (e.g., 0.10 = 10%)
+    escrow_status?: 'active' | 'released' | 'settled';
+    escrow_amount?: number;
+    escrow_released_at?: string;
     created_at: string;
   }
 

@@ -236,3 +236,77 @@ export async function getUserBidArtworks(
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 }
+
+/**
+ * Get active escrow bids for a user
+ * Returns bids with escrow_status = 'active' along with artwork information
+ */
+export async function getActiveEscrowBids(
+  userId: string
+): Promise<Array<BidWithArtwork & { escrowAmount: number }>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("bids")
+    .select(
+      `
+      id,
+      artwork_id,
+      user_id,
+      bid_amount,
+      buyer_premium_rate,
+      escrow_status,
+      escrow_amount,
+      escrow_released_at,
+      created_at,
+      artwork:artworks (
+        *,
+        artist:artists (*)
+      )
+    `
+    )
+    .eq("user_id", userId)
+    .eq("escrow_status", "active")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching active escrow bids:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  // Transform nested arrays to objects
+  return data.map((bid) => {
+    const artwork = Array.isArray(bid.artwork) ? bid.artwork[0] : bid.artwork;
+    const artist = artwork
+      ? Array.isArray(artwork.artist)
+        ? artwork.artist[0]
+        : artwork.artist
+      : null;
+
+    return {
+      id: bid.id,
+      artwork_id: bid.artwork_id,
+      user_id: bid.user_id,
+      bid_amount: bid.bid_amount,
+      buyer_premium_rate: bid.buyer_premium_rate,
+      escrow_status: bid.escrow_status,
+      escrow_amount: bid.escrow_amount,
+      escrow_released_at: bid.escrow_released_at,
+      created_at: bid.created_at,
+      artwork: {
+        ...artwork,
+        artist: artist,
+      },
+      escrowAmount: bid.escrow_amount ?? 0,
+    };
+  }) as Array<BidWithArtwork & { escrowAmount: number }>;
+}
