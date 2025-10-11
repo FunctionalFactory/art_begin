@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -5,6 +8,7 @@ import {
   calculateHammerPrice,
   calculateBuyerPremium,
 } from "@/lib/utils/auction";
+import { createClient } from "@/utils/supabase/client";
 
 export interface BidHistoryItem {
   id: string;
@@ -17,9 +21,57 @@ export interface BidHistoryItem {
 
 interface BidHistoryProps {
   bids: BidHistoryItem[];
+  artworkId: string;
+  currentUserId?: string;
 }
 
-export function BidHistory({ bids }: BidHistoryProps) {
+export function BidHistory({ bids: initialBids, artworkId, currentUserId }: BidHistoryProps) {
+  const [bids, setBids] = useState<BidHistoryItem[]>(initialBids);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Subscribe to bids table changes for this artwork
+    const channel = supabase
+      .channel(`bids:${artworkId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'bids',
+          filter: `artwork_id=eq.${artworkId}`,
+        },
+        async (payload) => {
+          // Fetch the new bid with user info
+          const { data: newBid } = await supabase
+            .from('bids')
+            .select('id, bid_amount, buyer_premium_rate, created_at, user_id')
+            .eq('id', payload.new.id)
+            .single();
+
+          if (newBid) {
+            const bidItem: BidHistoryItem = {
+              id: newBid.id,
+              bidAmount: newBid.bid_amount,
+              buyerPremiumRate: newBid.buyer_premium_rate || undefined,
+              createdAt: new Date(newBid.created_at),
+              userId: newBid.user_id,
+              isCurrentUser: currentUserId === newBid.user_id,
+            };
+
+            // Add new bid to the beginning and limit to 10 items
+            setBids((prevBids) => [bidItem, ...prevBids].slice(0, 10));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [artworkId, currentUserId]);
+
   if (bids.length === 0) {
     return (
       <Card>

@@ -25,6 +25,7 @@ import { RelatedArtworks } from "@/components/related-artworks";
 import { BidHistory } from "@/components/bid-history";
 import { ShareButton } from "@/components/share-button";
 import { ArtworkBreadcrumb } from "@/components/artwork-breadcrumb";
+import { RealtimeArtworkPrice } from "@/components/realtime-artwork-price";
 import { createClient } from "@/utils/supabase/server";
 
 interface ArtworkPageProps {
@@ -192,20 +193,12 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
           {artwork.saleType === "auction" && artwork.auctionEndTime ? (
             <Card>
               <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      현재가 (수수료 포함)
-                    </p>
-                    <p className="text-3xl font-bold text-primary">
-                      {formatPrice(artwork.currentPrice!)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground mb-1">입찰 수</p>
-                    <p className="text-2xl font-semibold">{artwork.bidCount}</p>
-                  </div>
-                </div>
+                <RealtimeArtworkPrice
+                  artworkId={artwork.id}
+                  initialPrice={artwork.currentPrice!}
+                  initialBidCount={artwork.bidCount || 0}
+                  formatPrice={formatPrice}
+                />
 
                 <AuctionCountdown endTime={artwork.auctionEndTime} />
 
@@ -253,9 +246,13 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
           </div>
 
           {/* Bid History (for auction items) */}
-          {artwork.saleType === "auction" && recentBids.length > 0 && (
+          {artwork.saleType === "auction" && (
             <div>
-              <BidHistory bids={recentBids} />
+              <BidHistory
+                bids={recentBids}
+                artworkId={artwork.id}
+                currentUserId={user?.id}
+              />
             </div>
           )}
         </div>
