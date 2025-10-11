@@ -10,6 +10,8 @@ export class ArtworkDetailPage {
   readonly bidButton: Locator;
   readonly bidHistory: Locator;
   readonly purchaseButton: Locator;
+  readonly availableBalanceDisplay: Locator;
+  readonly escrowWarning: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -21,6 +23,8 @@ export class ArtworkDetailPage {
     this.bidButton = page.locator('button:has-text("입찰하기")');
     this.bidHistory = page.locator('text=/입찰 내역/');
     this.purchaseButton = page.locator('button:has-text("구매하기")');
+    this.availableBalanceDisplay = page.locator('text=/사용 가능 잔고/');
+    this.escrowWarning = page.locator('text=/입찰 시 이 금액이 에스크로로 묶입니다/');
   }
 
   async goto(artworkId: string) {
@@ -75,5 +79,20 @@ export class ArtworkDetailPage {
 
   async expectPurchaseButtonToBeVisible() {
     await expect(this.purchaseButton).toBeVisible();
+  }
+
+  async expectAvailableBalanceToBeDisplayed() {
+    await expect(this.availableBalanceDisplay).toBeVisible();
+  }
+
+  async expectEscrowWarningWhenBidding(amount: number) {
+    await this.bidInput.fill(amount.toString());
+    await expect(this.escrowWarning).toBeVisible();
+  }
+
+  async getAvailableBalance(): Promise<number> {
+    const balanceText = await this.availableBalanceDisplay.textContent();
+    const priceMatch = balanceText?.match(/[\d,]+/);
+    return priceMatch ? parseInt(priceMatch[0].replace(/,/g, '')) : 0;
   }
 }
