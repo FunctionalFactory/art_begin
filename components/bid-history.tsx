@@ -43,6 +43,8 @@ export function BidHistory({ bids: initialBids, artworkId, currentUserId }: BidH
           filter: `artwork_id=eq.${artworkId}`,
         },
         async (payload) => {
+          console.log('[BidHistory] Received INSERT event:', payload);
+
           // Fetch the new bid with user info
           const { data: newBid } = await supabase
             .from('bids')
@@ -60,12 +62,32 @@ export function BidHistory({ bids: initialBids, artworkId, currentUserId }: BidH
               isCurrentUser: currentUserId === newBid.user_id,
             };
 
+            console.log('[BidHistory] Adding new bid to list:', bidItem);
             // Add new bid to the beginning and limit to 10 items
-            setBids((prevBids) => [bidItem, ...prevBids].slice(0, 10));
+            // Use Set to prevent duplicates
+            setBids((prevBids) => {
+              const exists = prevBids.some(b => b.id === bidItem.id);
+              if (exists) {
+                console.log('[BidHistory] Bid already exists, skipping:', bidItem.id);
+                return prevBids;
+              }
+              return [bidItem, ...prevBids].slice(0, 10);
+            });
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[BidHistory] Successfully subscribed to bids for artwork:', artworkId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('[BidHistory] Channel error (Realtime may not be enabled):', err || 'No error details');
+          console.info('[BidHistory] Falling back to custom events for updates');
+        } else if (status === 'TIMED_OUT') {
+          console.warn('[BidHistory] Subscription timed out, falling back to custom events');
+        } else if (status === 'CLOSED') {
+          console.info('[BidHistory] Channel closed');
+        }
+      });
 
     // Listen for custom bid-placed event for immediate UI update
     const handleBidPlaced = async (event: Event) => {
@@ -74,6 +96,8 @@ export function BidHistory({ bids: initialBids, artworkId, currentUserId }: BidH
 
       // Only handle events for this artwork
       if (eventArtworkId !== artworkId) return;
+
+      console.log('[BidHistory] Received bid-placed event, fetching latest bids');
 
       // Fetch the latest bids to ensure we have the most up-to-date data
       const { data: latestBids } = await supabase
@@ -84,7 +108,12 @@ export function BidHistory({ bids: initialBids, artworkId, currentUserId }: BidH
         .limit(10);
 
       if (latestBids) {
-        const bidItems: BidHistoryItem[] = latestBids.map((bid) => ({
+        // Remove duplicates based on id
+        const uniqueBids = Array.from(
+          new Map(latestBids.map(bid => [bid.id, bid])).values()
+        );
+
+        const bidItems: BidHistoryItem[] = uniqueBids.map((bid) => ({
           id: bid.id,
           bidAmount: bid.bid_amount,
           buyerPremiumRate: bid.buyer_premium_rate || undefined,
@@ -92,6 +121,7 @@ export function BidHistory({ bids: initialBids, artworkId, currentUserId }: BidH
           userId: bid.user_id,
           isCurrentUser: currentUserId === bid.user_id,
         }));
+        console.log('[BidHistory] Updated bids list:', bidItems.length, 'items');
         setBids(bidItems);
       }
     };

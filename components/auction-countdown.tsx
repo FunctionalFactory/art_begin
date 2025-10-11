@@ -34,14 +34,27 @@ export function AuctionCountdown({ endTime }: AuctionCountdownProps) {
   // Initialize with null to avoid hydration mismatch
   // Server and client will both render the same initial state
   const [timeRemaining, setTimeRemaining] = useState<TimeRemaining | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     // Calculate immediately on mount (client-side only)
-    setTimeRemaining(getTimeRemaining(endTime));
+    const remaining = getTimeRemaining(endTime);
+    setTimeRemaining(remaining);
+
+    // Check if auction has already expired
+    if (remaining.days === 0 && remaining.hours === 0 && remaining.minutes === 0 && remaining.seconds === 0) {
+      setIsExpired(true);
+    }
 
     // Then update every second
     const interval = setInterval(() => {
-      setTimeRemaining(getTimeRemaining(endTime));
+      const newRemaining = getTimeRemaining(endTime);
+      setTimeRemaining(newRemaining);
+
+      // Check if timer just reached zero
+      if (newRemaining.days === 0 && newRemaining.hours === 0 && newRemaining.minutes === 0 && newRemaining.seconds === 0) {
+        setIsExpired(true);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -49,6 +62,21 @@ export function AuctionCountdown({ endTime }: AuctionCountdownProps) {
 
   // If timeRemaining is null, show placeholder (prevents hydration mismatch)
   const displayTime = timeRemaining || { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+  // Show "Auction Ended" message if expired
+  if (isExpired) {
+    return (
+      <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg">
+        <div className="flex items-center space-x-2 mb-2">
+          <Clock className="w-4 h-4 text-destructive" />
+          <p className="text-sm font-semibold text-destructive">경매 종료</p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          이 경매는 종료되었습니다. 낙찰 처리가 진행 중입니다.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-muted p-4 rounded-lg">

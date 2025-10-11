@@ -36,6 +36,7 @@ export function RealtimeArtworkPrice({
           filter: `id=eq.${artworkId}`,
         },
         (payload) => {
+          console.log('[RealtimeArtworkPrice] Received UPDATE event:', payload);
           if (payload.new.current_price) {
             setCurrentPrice(payload.new.current_price);
           }
@@ -44,7 +45,18 @@ export function RealtimeArtworkPrice({
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[RealtimeArtworkPrice] Successfully subscribed to artwork:', artworkId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('[RealtimeArtworkPrice] Channel error (Realtime may not be enabled):', err || 'No error details');
+          console.info('[RealtimeArtworkPrice] Falling back to custom events for updates');
+        } else if (status === 'TIMED_OUT') {
+          console.warn('[RealtimeArtworkPrice] Subscription timed out, falling back to custom events');
+        } else if (status === 'CLOSED') {
+          console.info('[RealtimeArtworkPrice] Channel closed');
+        }
+      });
 
     // Listen for custom bid-placed event for immediate UI update
     const handleBidPlaced = (event: Event) => {
@@ -53,6 +65,8 @@ export function RealtimeArtworkPrice({
 
       // Only handle events for this artwork
       if (eventArtworkId !== artworkId) return;
+
+      console.log('[RealtimeArtworkPrice] Received bid-placed event:', { newPrice, newBidCount });
 
       // Update state immediately with data from the server response
       if (newPrice) {
