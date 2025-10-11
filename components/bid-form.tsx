@@ -88,6 +88,19 @@ export function BidForm({
           description: `입찰 금액: ${amount.toLocaleString("ko-KR")}원`,
         });
         setBidAmount("");
+
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(
+          new CustomEvent("bid-placed", {
+            detail: {
+              artworkId,
+              bidAmount: amount,
+              currentPrice: result.currentPrice,
+              bidCount: result.bidCount,
+            },
+          })
+        );
+
         router.refresh();
       } else {
         if (result.error === "로그인이 필요합니다.") {

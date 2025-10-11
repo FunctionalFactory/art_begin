@@ -67,8 +67,40 @@ export function BidHistory({ bids: initialBids, artworkId, currentUserId }: BidH
       )
       .subscribe();
 
+    // Listen for custom bid-placed event for immediate UI update
+    const handleBidPlaced = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { artworkId: eventArtworkId, bidAmount } = customEvent.detail;
+
+      // Only handle events for this artwork
+      if (eventArtworkId !== artworkId) return;
+
+      // Fetch the latest bids to ensure we have the most up-to-date data
+      const { data: latestBids } = await supabase
+        .from('bids')
+        .select('id, bid_amount, buyer_premium_rate, created_at, user_id')
+        .eq('artwork_id', artworkId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (latestBids) {
+        const bidItems: BidHistoryItem[] = latestBids.map((bid) => ({
+          id: bid.id,
+          bidAmount: bid.bid_amount,
+          buyerPremiumRate: bid.buyer_premium_rate || undefined,
+          createdAt: new Date(bid.created_at),
+          userId: bid.user_id,
+          isCurrentUser: currentUserId === bid.user_id,
+        }));
+        setBids(bidItems);
+      }
+    };
+
+    window.addEventListener('bid-placed', handleBidPlaced);
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener('bid-placed', handleBidPlaced);
     };
   }, [artworkId, currentUserId]);
 

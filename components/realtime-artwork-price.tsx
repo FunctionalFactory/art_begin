@@ -46,8 +46,28 @@ export function RealtimeArtworkPrice({
       )
       .subscribe();
 
+    // Listen for custom bid-placed event for immediate UI update
+    const handleBidPlaced = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { artworkId: eventArtworkId, currentPrice: newPrice, bidCount: newBidCount } = customEvent.detail;
+
+      // Only handle events for this artwork
+      if (eventArtworkId !== artworkId) return;
+
+      // Update state immediately with data from the server response
+      if (newPrice) {
+        setCurrentPrice(newPrice);
+      }
+      if (typeof newBidCount === 'number') {
+        setBidCount(newBidCount);
+      }
+    };
+
+    window.addEventListener('bid-placed', handleBidPlaced);
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener('bid-placed', handleBidPlaced);
     };
   }, [artworkId]);
 
