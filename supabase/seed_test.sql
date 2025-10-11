@@ -11,7 +11,7 @@
 -- Auth email: test1@example.com / password: TestUser123!
 INSERT INTO public.profiles (id, username, display_name, bio, balance, created_at, updated_at) VALUES
 (
-  'test1111-1111-1111-1111-111111111111',
+  '11111111-1111-1111-1111-111111111111',
   'test_user_1',
   '테스트 사용자 1',
   'E2E 테스트용 사용자 계정 (에스크로 활성)',
@@ -27,7 +27,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- Auth email: test2@example.com / password: TestUser123!
 INSERT INTO public.profiles (id, username, display_name, bio, balance, created_at, updated_at) VALUES
 (
-  'test2222-2222-2222-2222-222222222222',
+  '22222222-2222-2222-2222-222222222222',
   'test_user_2',
   '테스트 사용자 2',
   'E2E 테스트용 사용자 계정 (에스크로 없음)',
@@ -43,7 +43,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- Auth email: test3@example.com / password: TestUser123!
 INSERT INTO public.profiles (id, username, display_name, bio, balance, created_at, updated_at) VALUES
 (
-  'test3333-3333-3333-3333-333333333333',
+  '33333333-3333-3333-3333-333333333333',
   'test_user_3',
   '테스트 사용자 3',
   'E2E 테스트용 사용자 계정 (잔고 없음)',
@@ -60,7 +60,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- ============================================================
 INSERT INTO public.artists (id, user_id, name, username, bio, profile_image, created_at, updated_at) VALUES
 (
-  'test-artist-1111-1111-111111111111',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   NULL,
   '테스트 작가',
   'test_artist',
@@ -82,8 +82,8 @@ INSERT INTO public.artworks (
   bid_count, views, likes, status, created_at, updated_at
 ) VALUES
 (
-  'test-art-1111-1111-1111-111111111111',
-  'test-artist-1111-1111-111111111111',
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   '[테스트] 마감 임박 경매 작품',
   'E2E 테스트용 경매 작품입니다. 1시간 후 마감됩니다.',
   'https://images.unsplash.com/photo-1549887534-1541e9326642?w=800',
@@ -112,8 +112,8 @@ INSERT INTO public.artworks (
   bid_count, views, likes, status, created_at, updated_at
 ) VALUES
 (
-  'test-art-2222-2222-2222-222222222222',
-  'test-artist-1111-1111-111111111111',
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   '[테스트] 일반 경매 작품',
   'E2E 테스트용 경매 작품입니다. 3일 후 마감됩니다.',
   'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=800',
@@ -142,8 +142,8 @@ INSERT INTO public.artworks (
   bid_count, views, likes, status, created_at, updated_at
 ) VALUES
 (
-  'test-art-3333-3333-3333-333333333333',
-  'test-artist-1111-1111-111111111111',
+  'dddddddd-dddd-dddd-dddd-dddddddddddd',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   '[테스트] 입찰 없는 경매 작품',
   'E2E 테스트용 경매 작품입니다. 아직 입찰이 없습니다.',
   'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800',
@@ -172,8 +172,8 @@ INSERT INTO public.artworks (
   bid_count, views, likes, status, created_at, updated_at
 ) VALUES
 (
-  'test-art-4444-4444-4444-444444444444',
-  'test-artist-1111-1111-111111111111',
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   '[테스트] 즉시 구매 작품',
   'E2E 테스트용 즉시 구매 작품입니다.',
   'https://images.unsplash.com/photo-1515405295579-ba7b45403062?w=800',
@@ -206,9 +206,9 @@ INSERT INTO public.bids (
   escrow_status, escrow_amount, escrow_released_at, created_at
 ) VALUES
 (
-  'test-bid-1111-1111-1111-111111111111',
-  'test-art-1111-1111-1111-111111111111',
-  'test1111-1111-1111-1111-111111111111',
+  'ffffffff-ffff-ffff-ffff-ffffffffffff',
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  '11111111-1111-1111-1111-111111111111',
   150000,
   0.15, -- 15% 구매자 수수료
   'active', -- 활성 에스크로
@@ -230,9 +230,9 @@ INSERT INTO public.bids (
   escrow_status, escrow_amount, escrow_released_at, created_at
 ) VALUES
 (
-  'test-bid-2222-2222-2222-222222222222',
-  'test-art-2222-2222-2222-222222222222',
-  'test1111-1111-1111-1111-111111111111',
+  'gggggggg-gggg-gggg-gggg-gggggggggggg',
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  '11111111-1111-1111-1111-111111111111',
   300000,
   0.15,
   'active', -- 활성 에스크로
@@ -251,9 +251,9 @@ INSERT INTO public.bids (
   escrow_status, escrow_amount, escrow_released_at, created_at
 ) VALUES
 (
-  'test-bid-3333-3333-3333-333333333333',
-  'test-art-1111-1111-1111-111111111111',
-  'test1111-1111-1111-1111-111111111111',
+  'hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhhhhhh',
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  '11111111-1111-1111-1111-111111111111',
   140000,
   0.15,
   'released', -- 에스크로 해제됨 (다른 사람이 더 높은 입찰)
@@ -283,7 +283,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- Test User 1의 잔고를 충분히 증가시켜서 현실적인 테스트 가능하도록 조정
 UPDATE public.profiles
 SET balance = 600000, updated_at = NOW()
-WHERE id = 'test1111-1111-1111-1111-111111111111';
+WHERE id = '11111111-1111-1111-1111-111111111111';
 
 -- ============================================================
 -- EXPECTED RESULTS FOR E2E TESTS
@@ -310,8 +310,8 @@ INSERT INTO public.transactions (
   id, user_id, type, amount, description, balance_after, created_at
 ) VALUES
 (
-  'test-txn-1111-1111-1111-111111111111',
-  'test1111-1111-1111-1111-111111111111',
+  'iiiiiiii-iiii-iiii-iiii-iiiiiiiiiiii',
+  '11111111-1111-1111-1111-111111111111',
   'deposit',
   500000,
   '초기 잔고 충전',
@@ -319,8 +319,8 @@ INSERT INTO public.transactions (
   NOW() - INTERVAL '3 days'
 ),
 (
-  'test-txn-2222-2222-2222-222222222222',
-  'test1111-1111-1111-1111-111111111111',
+  'jjjjjjjj-jjjj-jjjj-jjjj-jjjjjjjjjjjj',
+  '11111111-1111-1111-1111-111111111111',
   'deposit',
   100000,
   '추가 잔고 충전',
@@ -328,8 +328,8 @@ INSERT INTO public.transactions (
   NOW() - INTERVAL '2 days'
 ),
 (
-  'test-txn-3333-3333-3333-333333333333',
-  'test2222-2222-2222-2222-222222222222',
+  'kkkkkkkk-kkkk-kkkk-kkkk-kkkkkkkkkkkk',
+  '22222222-2222-2222-2222-222222222222',
   'deposit',
   1000000,
   '초기 잔고 충전',
