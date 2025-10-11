@@ -7,17 +7,19 @@ interface RealtimeArtworkPriceProps {
   artworkId: string;
   initialPrice: number;
   initialBidCount: number;
-  formatPrice: (price: number) => string;
 }
 
 export function RealtimeArtworkPrice({
   artworkId,
   initialPrice,
   initialBidCount,
-  formatPrice,
 }: RealtimeArtworkPriceProps) {
   const [currentPrice, setCurrentPrice] = useState(initialPrice);
   const [bidCount, setBidCount] = useState(initialBidCount);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("ko-KR").format(price) + " 원";
+  };
 
   useEffect(() => {
     const supabase = createClient();

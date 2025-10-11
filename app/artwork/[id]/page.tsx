@@ -197,7 +197,6 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
                   artworkId={artwork.id}
                   initialPrice={artwork.currentPrice!}
                   initialBidCount={artwork.bidCount || 0}
-                  formatPrice={formatPrice}
                 />
 
                 <AuctionCountdown endTime={artwork.auctionEndTime} />
