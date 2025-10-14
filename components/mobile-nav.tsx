@@ -66,15 +66,6 @@ export function MobileNav({ user, isArtist }: MobileNavProps) {
           >
             Artists
           </Link>
-          {isArtist && (
-            <Link
-              href="/artist-dashboard"
-              onClick={closeSheet}
-              className="text-lg font-medium hover:text-primary transition-colors py-2"
-            >
-              Dashboard
-            </Link>
-          )}
           <div className="border-t pt-4 mt-4">
             {user ? (
               <>

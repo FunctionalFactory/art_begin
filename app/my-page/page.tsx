@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Package, Gavel, Settings, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/server";
-import { getFavoritesByUser, getUserBidArtworks, getProfileByUserId, getUserOrders } from "@/lib/queries";
+import { getFavoritesByUser, getUserBidArtworks, getProfileByUserId, getUserOrders, getArtworksByArtistUserId, getArtistSales } from "@/lib/queries";
 import { transformArtworkToLegacy } from "@/lib/utils/transform";
 import { MyPageClient } from "./my-page-client";
 import { redirect } from "next/navigation";
@@ -37,6 +37,31 @@ export default async function MyPage() {
   // Fetch user's order history from database
   const orders = await getUserOrders(user.id);
 
+  // Fetch artist data if user is an artist
+  let artistArtworks = null;
+  let artistSales = null;
+  if (isArtist) {
+    // Get artworks by artist user ID
+    artistArtworks = await getArtworksByArtistUserId(user.id);
+
+    // Get artist ID from first artwork or fetch separately
+    let artistId: string | null = null;
+    if (artistArtworks.length > 0) {
+      artistId = artistArtworks[0].artist_id;
+    } else {
+      // Fetch artist record if no artworks yet
+      const { data: artistData } = await supabase
+        .from("artists")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      artistId = artistData?.id || null;
+    }
+
+    // Fetch sales history
+    artistSales = artistId ? await getArtistSales(artistId) : [];
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
@@ -45,14 +70,6 @@ export default async function MyPage() {
           <p className="text-muted-foreground">내 활동과 관심 작품을 관리하세요</p>
         </div>
         <div className="flex gap-2">
-          {isArtist && (
-            <Link href="/artist-dashboard">
-              <Button variant="outline">
-                <Palette className="w-4 h-4 mr-2" />
-                작가 대시보드
-              </Button>
-            </Link>
-          )}
           <Link href="/profile/edit">
             <Button variant="outline">
               <Settings className="w-4 h-4 mr-2" />
@@ -114,6 +131,9 @@ export default async function MyPage() {
         favoriteArtworks={favoriteArtworks}
         bidHistory={bidHistory}
         orders={orders}
+        isArtist={isArtist}
+        artistArtworks={artistArtworks}
+        artistSales={artistSales}
       />
     </div>
   );

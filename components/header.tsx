@@ -44,15 +44,6 @@ export async function Header() {
             >
               Artists
             </Link>
-            {isArtist && (
-              <Link
-                href="/artist-dashboard"
-                className="text-sm font-medium hover:text-primary transition-colors"
-                aria-label="작가 대시보드"
-              >
-                Dashboard
-              </Link>
-            )}
           </nav>
         </div>
         <div className="flex items-center space-x-4">
