@@ -10,6 +10,7 @@ import {
   createArtwork,
   updateArtwork,
   deleteArtwork,
+  canDeleteArtwork,
   searchArtworks,
 } from '../artworks';
 import type { Database, ArtworkWithArtist } from '@/lib/types';
@@ -706,41 +707,197 @@ describe('artworks.ts', () => {
     });
   });
 
+  describe('canDeleteArtwork()', () => {
+    it('should allow deletion of auction artwork with no bids', async () => {
+      const noBidArtwork = { ...mockArtwork, bid_count: 0, status: 'active' };
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...noBidArtwork, artist: mockArtist },
+        error: null,
+      });
+      mockSupabaseClient.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
+      const result = await canDeleteArtwork('artwork-1');
+
+      expect(result.canDelete).toBe(true);
+      expect(result.reason).toBeUndefined();
+    });
+
+    it('should allow deletion of fixed price artwork', async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...mockFixedPriceArtwork, artist: mockArtist },
+        error: null,
+      });
+      mockSupabaseClient.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
+      const result = await canDeleteArtwork('artwork-2');
+
+      expect(result.canDelete).toBe(true);
+      expect(result.reason).toBeUndefined();
+    });
+
+    it('should prevent deletion of sold artwork', async () => {
+      const soldArtwork = { ...mockArtwork, status: 'sold' };
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...soldArtwork, artist: mockArtist },
+        error: null,
+      });
+
+      const result = await canDeleteArtwork('artwork-1');
+
+      expect(result.canDelete).toBe(false);
+      expect(result.reason).toBe('이미 판매 완료된 작품은 삭제할 수 없습니다.');
+    });
+
+    it('should prevent deletion of auction artwork with bids', async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...mockArtwork, artist: mockArtist },
+        error: null,
+      });
+
+      const result = await canDeleteArtwork('artwork-1');
+
+      expect(result.canDelete).toBe(false);
+      expect(result.reason).toBe('경매 진행 중인 작품은 삭제할 수 없습니다. 입찰자가 있습니다.');
+    });
+
+    it('should prevent deletion of artwork with existing orders', async () => {
+      const noBidArtwork = { ...mockArtwork, bid_count: 0, status: 'active' };
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...noBidArtwork, artist: mockArtist },
+        error: null,
+      });
+      mockSupabaseClient.limit.mockResolvedValueOnce({
+        data: [{ id: 'order-1' }],
+        error: null,
+      });
+
+      const result = await canDeleteArtwork('artwork-1');
+
+      expect(result.canDelete).toBe(false);
+      expect(result.reason).toBe('주문이 존재하는 작품은 삭제할 수 없습니다.');
+    });
+
+    it('should return false when artwork not found', async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      const result = await canDeleteArtwork('non-existent-id');
+
+      expect(result.canDelete).toBe(false);
+      expect(result.reason).toBe('작품을 찾을 수 없습니다.');
+    });
+
+    it('should handle error when checking orders', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const noBidArtwork = { ...mockArtwork, bid_count: 0, status: 'active' };
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...noBidArtwork, artist: mockArtist },
+        error: null,
+      });
+      mockSupabaseClient.limit.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Database error' },
+      });
+
+      const result = await canDeleteArtwork('artwork-1');
+
+      expect(result.canDelete).toBe(false);
+      expect(result.reason).toBe('작품 삭제 가능 여부를 확인하는 중 오류가 발생했습니다.');
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
   describe('deleteArtwork()', () => {
-    it('should successfully delete artwork', async () => {
-      mockSupabaseClient.eq.mockResolvedValue({
+    it('should call canDeleteArtwork and delete when allowed', async () => {
+      // Mock full flow: getArtworkById -> orders check -> delete
+      const noBidArtwork = { ...mockArtwork, bid_count: 0, status: 'active' };
+
+      // Chain for getArtworkById
+      mockSupabaseClient.select.mockReturnThis();
+      mockSupabaseClient.eq.mockReturnThis();
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...noBidArtwork, artist: mockArtist },
+        error: null,
+      });
+
+      // Chain for orders check
+      mockSupabaseClient.from.mockReturnThis();
+      mockSupabaseClient.select.mockReturnThis();
+      mockSupabaseClient.eq.mockReturnThis();
+      mockSupabaseClient.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
+      // Chain for delete
+      mockSupabaseClient.from.mockReturnThis();
+      mockSupabaseClient.delete.mockReturnThis();
+      mockSupabaseClient.eq.mockResolvedValueOnce({
         error: null,
       });
 
       const result = await deleteArtwork('artwork-1');
 
       expect(result.success).toBe(true);
-      expect(mockSupabaseClient.delete).toHaveBeenCalled();
-      expect(mockSupabaseClient.eq).toHaveBeenCalledWith('id', 'artwork-1');
     });
 
-    it('should fail when deleting non-existent artwork', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockSupabaseClient.eq.mockResolvedValue({
-        error: { message: 'Artwork not found' },
-      });
+    it('should prevent deletion when canDeleteArtwork returns false', async () => {
+      // Mock full flow for sold artwork
+      const soldArtwork = { ...mockArtwork, status: 'sold' };
 
-      const result = await deleteArtwork('non-existent-id');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('작품 삭제 중 오류가 발생했습니다.');
-      consoleErrorSpy.mockRestore();
-    });
-
-    it('should handle database error during deletion', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockSupabaseClient.eq.mockResolvedValue({
-        error: { message: 'Foreign key constraint violation' },
+      mockSupabaseClient.select.mockReturnThis();
+      mockSupabaseClient.eq.mockReturnThis();
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...soldArtwork, artist: mockArtist },
+        error: null,
       });
 
       const result = await deleteArtwork('artwork-1');
 
       expect(result.success).toBe(false);
+      expect(result.error).toBe('이미 판매 완료된 작품은 삭제할 수 없습니다.');
+    });
+
+    it('should handle database error during deletion', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const noBidArtwork = { ...mockArtwork, bid_count: 0, status: 'active' };
+
+      // Mock getArtworkById
+      mockSupabaseClient.select.mockReturnThis();
+      mockSupabaseClient.eq.mockReturnThis();
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...noBidArtwork, artist: mockArtist },
+        error: null,
+      });
+
+      // Mock orders check
+      mockSupabaseClient.from.mockReturnThis();
+      mockSupabaseClient.select.mockReturnThis();
+      mockSupabaseClient.eq.mockReturnThis();
+      mockSupabaseClient.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
+      // Mock delete fails
+      mockSupabaseClient.from.mockReturnThis();
+      mockSupabaseClient.delete.mockReturnThis();
+      mockSupabaseClient.eq.mockResolvedValueOnce({
+        error: { message: 'Database error' },
+      });
+
+      const result = await deleteArtwork('artwork-1');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('작품 삭제 중 오류가 발생했습니다.');
       consoleErrorSpy.mockRestore();
     });
   });
