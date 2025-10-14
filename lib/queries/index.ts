@@ -6,6 +6,7 @@ export {
   getAllArtists,
   createArtist,
   updateArtist,
+  getArtistEarnings,
 } from './artists';
 
 export {

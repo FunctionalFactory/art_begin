@@ -85,15 +85,24 @@ export function RealtimeArtworkPrice({
     };
   }, [artworkId]);
 
+  // Determine if this is the starting price (no bids yet) or current bid
+  const isStartingPrice = bidCount === 0;
+  const priceLabel = isStartingPrice ? "경매 시작가" : "현재가";
+
   return (
     <div className="flex items-center justify-between">
       <div>
         <p className="text-sm text-muted-foreground mb-1">
-          현재가 (수수료 포함)
+          {priceLabel}
         </p>
         <p className="text-3xl font-bold text-primary">
           {formatPrice(currentPrice)}
         </p>
+        {!isStartingPrice && (
+          <p className="text-xs text-muted-foreground mt-1">
+            (구매자 수수료 별도)
+          </p>
+        )}
       </div>
       <div className="text-right">
         <p className="text-sm text-muted-foreground mb-1">입찰 수</p>

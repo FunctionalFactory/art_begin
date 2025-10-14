@@ -128,6 +128,27 @@ export function formatBidBreakdown(
 }
 
 /**
+ * Check if an auction has ended
+ * @param endTime - Auction end time (Date object or ISO string)
+ * @returns true if auction has ended, false otherwise
+ *
+ * @example
+ * isAuctionEnded(new Date('2025-01-01')) // Returns true if current time is after 2025-01-01
+ * isAuctionEnded('2025-01-01T00:00:00Z') // Returns true if current time is after 2025-01-01
+ * isAuctionEnded(null) // Returns false
+ */
+export function isAuctionEnded(endTime: Date | string | null | undefined): boolean {
+  if (!endTime) {
+    return false;
+  }
+
+  const endDate = typeof endTime === 'string' ? new Date(endTime) : endTime;
+  const now = new Date();
+
+  return now.getTime() > endDate.getTime();
+}
+
+/**
  * Format price for display in Korean Won
  * @param price - Price amount
  * @returns Formatted price string (e.g., "1,000,000원")

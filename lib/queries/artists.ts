@@ -157,3 +157,53 @@ export async function updateArtist(
     data,
   };
 }
+
+/**
+ * Get artist's earnings summary
+ * @param artistId - Artist's ID
+ * @returns Total earnings, withdrawable amount, and total sales count
+ */
+export async function getArtistEarnings(artistId: string): Promise<{
+  totalEarnings: number;
+  withdrawableAmount: number;
+  totalSales: number;
+}> {
+  const supabase = await createClient();
+
+  // Get all artworks by this artist
+  const { data: artworks, error: artworksError } = await supabase
+    .from('artworks')
+    .select('id')
+    .eq('artist_id', artistId);
+
+  if (artworksError || !artworks) {
+    console.error('Error fetching artist artworks:', artworksError);
+    return { totalEarnings: 0, withdrawableAmount: 0, totalSales: 0 };
+  }
+
+  const artworkIds = artworks.map((a) => a.id);
+
+  if (artworkIds.length === 0) {
+    return { totalEarnings: 0, withdrawableAmount: 0, totalSales: 0 };
+  }
+
+  // Get all completed orders for these artworks
+  const { data: orders, error: ordersError } = await supabase
+    .from('orders')
+    .select('price')
+    .in('artwork_id', artworkIds)
+    .eq('status', 'completed');
+
+  if (ordersError) {
+    console.error('Error fetching artist sales:', ordersError);
+    return { totalEarnings: 0, withdrawableAmount: 0, totalSales: 0 };
+  }
+
+  const totalEarnings = orders?.reduce((sum, order) => sum + order.price, 0) || 0;
+
+  return {
+    totalEarnings,
+    withdrawableAmount: totalEarnings, // For now, all earnings are withdrawable
+    totalSales: orders?.length || 0,
+  };
+}

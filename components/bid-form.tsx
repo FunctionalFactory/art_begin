@@ -36,7 +36,9 @@ export function BidForm({
   const [bidAmount, setBidAmount] = useState<string>("");
   const [error, setError] = useState<string>("");
 
-  const minBidAmount = currentPrice + MIN_BID_INCREMENT;
+  // If currentPrice is 0 or undefined, treat it as starting from 0
+  const safeCurrentPrice = currentPrice || 0;
+  const minBidAmount = safeCurrentPrice + MIN_BID_INCREMENT;
   const buyerPremiumRate = getBuyerPremiumRate();
 
   // Calculate bid breakdown for real-time display
@@ -177,12 +179,18 @@ export function BidForm({
 
       <div>
         <div className="mb-3">
-          <p className="text-sm text-muted-foreground mb-1">
-            최소 입찰가: {minBidAmount.toLocaleString("ko-KR")}원
-          </p>
+          {safeCurrentPrice === 0 ? (
+            <p className="text-sm text-muted-foreground mb-1">
+              경매 시작가: {minBidAmount.toLocaleString("ko-KR")}원부터
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground mb-1">
+              최소 입찰가: {minBidAmount.toLocaleString("ko-KR")}원
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
-            입찰가에는 {(buyerPremiumRate * 100).toFixed(0)}% 수수료가
-            포함됩니다
+            입찰 시 {(buyerPremiumRate * 100).toFixed(0)}% 구매자 수수료가
+            추가됩니다
           </p>
         </div>
         <div className="flex space-x-2">

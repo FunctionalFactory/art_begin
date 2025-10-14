@@ -63,13 +63,21 @@ export async function placeBid(artworkId: string, bidAmount: number) {
   const minValidBid = currentPrice + MIN_BID_INCREMENT;
 
   if (bidAmount < minValidBid) {
+    const errorMessage = currentPrice === 0
+      ? `입찰 금액은 ${MIN_BID_INCREMENT.toLocaleString(
+          "ko-KR"
+        )}원 이상이어야 합니다. 최소 입찰가: ${minValidBid.toLocaleString(
+          "ko-KR"
+        )}원`
+      : `입찰 금액은 현재가보다 ${MIN_BID_INCREMENT.toLocaleString(
+          "ko-KR"
+        )}원 이상 높아야 합니다. 최소 입찰가: ${minValidBid.toLocaleString(
+          "ko-KR"
+        )}원`;
+
     return {
       success: false,
-      error: `입찰 금액은 현재가보다 ${MIN_BID_INCREMENT.toLocaleString(
-        "ko-KR"
-      )}원 이상 높아야 합니다. 최소 입찰가: ${minValidBid.toLocaleString(
-        "ko-KR"
-      )}원`,
+      error: errorMessage,
       minBidAmount: minValidBid,
       currentPrice,
     };
