@@ -307,12 +307,64 @@ export async function updateArtwork(
 }
 
 /**
+ * Check if artwork can be deleted
+ */
+export async function canDeleteArtwork(
+  artworkId: string
+): Promise<{ canDelete: boolean; reason?: string }> {
+  const supabase = await createClient();
+
+  // 1. Get artwork information
+  const artwork = await getArtworkById(artworkId);
+  if (!artwork) {
+    return { canDelete: false, reason: '작품을 찾을 수 없습니다.' };
+  }
+
+  // 2. Check if artwork is sold
+  if (artwork.status === 'sold') {
+    return { canDelete: false, reason: '이미 판매 완료된 작품은 삭제할 수 없습니다.' };
+  }
+
+  // 3. Check if auction has bids
+  if (artwork.sale_type === 'auction' && artwork.bid_count > 0) {
+    return { canDelete: false, reason: '경매 진행 중인 작품은 삭제할 수 없습니다. 입찰자가 있습니다.' };
+  }
+
+  // 4. Check if orders exist for this artwork
+  const { data: orders, error: ordersError } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('artwork_id', artworkId)
+    .limit(1);
+
+  if (ordersError) {
+    console.error('Error checking orders:', ordersError);
+    return { canDelete: false, reason: '작품 삭제 가능 여부를 확인하는 중 오류가 발생했습니다.' };
+  }
+
+  if (orders && orders.length > 0) {
+    return { canDelete: false, reason: '주문이 존재하는 작품은 삭제할 수 없습니다.' };
+  }
+
+  return { canDelete: true };
+}
+
+/**
  * Delete artwork
  */
 export async function deleteArtwork(
   artworkId: string
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
+
+  // Check if artwork can be deleted
+  const { canDelete, reason } = await canDeleteArtwork(artworkId);
+  if (!canDelete) {
+    return {
+      success: false,
+      error: reason || '작품을 삭제할 수 없습니다.',
+    };
+  }
 
   const { error } = await supabase
     .from('artworks')
